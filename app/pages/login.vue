@@ -55,7 +55,7 @@ function submitLogin() {
           <p v-if="loginError" role="alert" class="text-center text-sm font-medium text-rose-600">{{ loginError }}</p>
         </form>
 
-        <p class="mt-6 text-center text-xs text-slate-400">Demo mode — use your SoterWeb demo account.</p>
+        <p class="mt-6 text-center text-xs leading-5 text-slate-400">Demo account: <strong class="font-semibold text-slate-500">Test</strong> / <strong class="font-semibold text-slate-500">Leeds</strong></p>
       </div>
     </section>
   </div>
