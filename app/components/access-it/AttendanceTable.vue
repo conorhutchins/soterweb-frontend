@@ -1,0 +1,158 @@
+<script setup lang="ts">
+import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useVueTable, type ColumnDef, type SortingState } from '@tanstack/vue-table'
+import { ArrowDownUp, ChevronLeft, ChevronRight, Ellipsis, Eye, LogOut, Search } from '@lucide/vue'
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
+import { Table } from '~/components/ui/table'
+import { describeDuration, formatDateTime } from '~/lib/access-it/time'
+import type { AttendanceRecord } from '~/types/access-it'
+
+const props = defineProps<{
+  records: AttendanceRecord[]
+  /** Previous attendance shows the logged off column instead of duration-to-now. */
+  history: boolean
+}>()
+
+const emit = defineEmits<{
+  view: [record: AttendanceRecord]
+  logOff: [record: AttendanceRecord]
+}>()
+
+const searchTerm = ref('')
+const sorting = ref<SortingState>([])
+
+const columns: ColumnDef<AttendanceRecord>[] = [
+  { accessorKey: 'type', header: 'Type', enableSorting: false },
+  { id: 'name', header: 'Name', accessorFn: (record) => `${record.name} ${record.company}` },
+  { accessorKey: 'mobile', header: 'Mobile', enableSorting: false },
+  { accessorKey: 'buildingName', header: 'Building' },
+  { accessorKey: 'locationOrHost', header: 'Location / visiting', enableSorting: false },
+  { accessorKey: 'description', header: 'Description', enableSorting: false },
+  { accessorKey: 'loggedOnAt', header: 'Logged on' },
+  { accessorKey: 'expectedLogOffAt', header: 'Expected log off', enableSorting: false },
+  { id: 'duration', header: 'Duration', enableSorting: false },
+  { id: 'actions', header: '', enableSorting: false },
+]
+
+const table = useVueTable({
+  get data() { return props.records },
+  columns,
+  state: {
+    get globalFilter() { return searchTerm.value },
+    get sorting() { return sorting.value },
+  },
+  onGlobalFilterChange: (value) => { searchTerm.value = value },
+  onSortingChange: (value) => { sorting.value = typeof value === 'function' ? value(sorting.value) : value },
+  getCoreRowModel: getCoreRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  initialState: { pagination: { pageSize: 8 } },
+})
+
+const visibleRows = computed(() => table.getRowModel().rows)
+const totalResults = computed(() => table.getFilteredRowModel().rows.length)
+
+watch(() => props.history, () => table.setPageIndex(0))
+
+function sortColumn(columnId: string) {
+  table.getColumn(columnId)?.toggleSorting()
+}
+
+function sortDirection(columnId: string) {
+  return table.getColumn(columnId)?.getIsSorted()
+}
+
+function columnLabel(columnId: string) {
+  if (columnId === 'duration' && props.history) return 'Logged off'
+  return columns.find((column) => ('accessorKey' in column && column.accessorKey === columnId) || column.id === columnId)?.header ?? ''
+}
+
+function isOverdue(record: AttendanceRecord) {
+  return record.status === 'On site' && new Date(record.expectedLogOffAt).getTime() < Date.now()
+}
+
+function isOver24Hours(record: AttendanceRecord) {
+  return record.status === 'On site' && Boolean(record.loggedOnAt) && Date.now() - new Date(record.loggedOnAt as string).getTime() > 24 * 60 * 60 * 1000
+}
+
+function duration(record: AttendanceRecord) {
+  if (!record.loggedOnAt) return '—'
+  return describeDuration(record.loggedOnAt, record.loggedOffAt ?? new Date().toISOString())
+}
+</script>
+
+<template>
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="relative max-w-md flex-1">
+        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+        <input v-model="searchTerm" type="search" placeholder="Search by name, company, building…" class="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-hidden transition placeholder:text-slate-400 focus:border-soter-500 focus:bg-white focus:ring-3 focus:ring-soter-100" />
+      </div>
+      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-700">{{ totalResults }}</span> {{ totalResults === 1 ? 'record' : 'records' }} {{ history ? 'in previous attendance' : 'on site' }}</p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <Table class="min-w-[1100px] border-collapse text-left">
+        <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
+          <tr>
+            <th v-for="header in table.getFlatHeaders()" :key="header.id" scope="col" class="whitespace-nowrap px-4 py-3.5 font-semibold">
+              <button v-if="header.column.getCanSort()" class="flex items-center gap-2 outline-hidden hover:text-soter-600 focus:text-soter-600" @click="sortColumn(header.column.id)">
+                {{ columnLabel(header.column.id) }}
+                <ArrowDownUp class="size-3.5" :class="sortDirection(header.column.id) ? 'text-soter-600' : 'text-slate-300'" />
+              </button>
+              <template v-else>{{ columnLabel(header.column.id) }}</template>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-sm">
+          <tr v-for="row in visibleRows" :key="row.id" class="group align-top transition hover:bg-soter-50/60">
+            <td class="px-4 py-3.5"><AccessItStatusPill :label="row.original.type" :tone="row.original.type === 'Contractor' ? 'info' : 'success'" /></td>
+            <td class="min-w-52 px-4 py-3.5">
+              <p class="font-medium text-ink">{{ row.original.name }}</p>
+              <p class="mt-0.5 text-xs text-slate-500">{{ row.original.company }}</p>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">{{ row.original.mobile }}</td>
+            <td class="px-4 py-3.5 text-slate-700">{{ row.original.buildingName }}</td>
+            <td class="px-4 py-3.5 text-slate-600">{{ row.original.locationOrHost }}</td>
+            <td class="max-w-[240px] px-4 py-3.5 text-slate-600">{{ row.original.description }}</td>
+            <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">{{ formatDateTime(row.original.loggedOnAt) }}</td>
+            <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">
+              <span class="flex items-center gap-2">{{ formatDateTime(row.original.expectedLogOffAt) }}<AccessItStatusPill v-if="isOverdue(row.original)" label="Overdue" tone="danger" /></span>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">
+              <span v-if="history">{{ formatDateTime(row.original.loggedOffAt) }}</span>
+              <span v-else class="flex items-center gap-2">{{ duration(row.original) }}<AccessItStatusPill v-if="isOver24Hours(row.original)" label="> 24h" tone="warning" /></span>
+            </td>
+            <td class="px-4 py-3.5 text-right">
+              <DropdownMenuRoot>
+                <DropdownMenuTrigger class="rounded-lg p-2 text-slate-400 outline-hidden transition hover:bg-white hover:text-slate-700 group-hover:bg-white/80"><Ellipsis class="size-4" /><span class="sr-only">Actions for {{ row.original.name }}</span></DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuContent class="z-50 min-w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg" :side-offset="6" align="end">
+                    <DropdownMenuItem class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-hidden hover:bg-slate-50" @select="emit('view', row.original)"><Eye class="size-4 text-slate-500" /> View details</DropdownMenuItem>
+                    <DropdownMenuItem v-if="row.original.status === 'On site'" class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-700 outline-hidden hover:bg-rose-50" @select="emit('logOff', row.original)"><LogOut class="size-4" /> Log off site</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuPortal>
+              </DropdownMenuRoot>
+            </td>
+          </tr>
+          <tr v-if="visibleRows.length === 0">
+            <td colspan="10" class="px-5 py-14 text-center text-sm text-slate-500">
+              {{ searchTerm ? 'Nobody matches your search.' : history ? 'No previous attendance has been recorded yet.' : 'Nobody is currently recorded on site.' }}
+            </td>
+          </tr>
+        </tbody>
+      </Table>
+    </div>
+
+    <footer class="flex flex-col gap-3 border-t border-slate-100 px-5 py-3.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+      <span>Page <strong class="font-semibold text-slate-700">{{ table.getState().pagination.pageIndex + 1 }}</strong> of <strong class="font-semibold text-slate-700">{{ table.getPageCount() || 1 }}</strong></span>
+      <div class="flex items-center gap-3">
+        <span>{{ table.getState().pagination.pageIndex * table.getState().pagination.pageSize + (visibleRows.length ? 1 : 0) }}–{{ table.getState().pagination.pageIndex * table.getState().pagination.pageSize + visibleRows.length }} of {{ totalResults }}</span>
+        <div class="flex gap-1">
+          <button :disabled="!table.getCanPreviousPage()" class="rounded-lg border border-slate-200 p-1.5 text-slate-600 outline-hidden transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" @click="table.previousPage()"><ChevronLeft class="size-4" /><span class="sr-only">Previous page</span></button>
+          <button :disabled="!table.getCanNextPage()" class="rounded-lg border border-slate-200 p-1.5 text-slate-600 outline-hidden transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40" @click="table.nextPage()"><ChevronRight class="size-4" /><span class="sr-only">Next page</span></button>
+        </div>
+      </div>
+    </footer>
+  </section>
+</template>
