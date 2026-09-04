@@ -57,6 +57,8 @@ function submitLogin() {
 
         <p class="mt-6 text-center text-xs leading-5 text-slate-400">Demo account: <strong class="font-semibold text-slate-500">Test</strong> / <strong class="font-semibold text-slate-500">Leeds</strong></p>
       </div>
+
+      <p class="mt-6 text-center text-sm text-soter-100">Contractor or visitor? <NuxtLink to="/site-access" class="font-semibold text-white underline-offset-4 hover:underline">Go to site access</NuxtLink></p>
     </section>
   </div>
 </template>
