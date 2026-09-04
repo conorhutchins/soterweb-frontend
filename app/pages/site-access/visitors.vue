@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight, CircleCheck, Link2, LogIn, LogOut, Mail, TriangleAlert } from '@lucide/vue'
 import { formatDateTime } from '~/lib/access-it/time'
-import { emptyVisitorForm, visitorInputFromForm } from '~/lib/access-it/visitor-form'
+import { emptyVisitorForm, visitorInputFromForm, visitorTimingErrors } from '~/lib/access-it/visitor-form'
 import type { AttendanceRecord, SentEmail } from '~/types/access-it'
 
 // The self-service visitor route: reached from the kiosk holding screen and from the links in emailed passes.
@@ -11,7 +11,7 @@ type View = 'hub' | 'logon' | 'loggedOn' | 'logoff' | 'loggedOff' | 'notice'
 
 const route = useRoute()
 const router = useRouter()
-const { visitorsCanSelfServe, paramIsYes, param } = useAccessItConfig()
+const { visitorsCanSelfServe, paramIsYes, param, eNote } = useAccessItConfig()
 const { activeBuildings, staffContacts } = useSiteDirectory()
 const { sentEmails, visitorSelfLogOn, findVisitorOnSiteByContact, findByToken, markArrived, markDeparted, logOffPath } = useSiteAttendance()
 
@@ -28,6 +28,9 @@ const buildingId = ref<number | ''>('')
 const form = ref(emptyVisitorForm())
 const acceptedRecord = ref<AttendanceRecord | null>(null)
 const firedEmails = ref<SentEmail[]>([])
+const logOnErrors = ref<string[]>([])
+/** An on-site record matching the details entered, so a visitor is not logged on twice. */
+const duplicateRecord = ref<AttendanceRecord | null>(null)
 
 const logOffMobile = ref('')
 const logOffEmail = ref('')
@@ -51,9 +54,9 @@ const currentStep = computed(() => {
 const shellTitle = computed(() => ({
   hub: 'Visitors',
   logon: 'Log on to site',
-  loggedOn: 'Login accepted',
+  loggedOn: eNote('V3').title || 'Login accepted',
   logoff: 'Log off site',
-  loggedOff: 'Logout accepted',
+  loggedOff: eNote('V5').title || 'Logout accepted',
   notice: notice.value?.title ?? 'Visitors',
 })[view.value])
 
@@ -91,6 +94,8 @@ function resetJourney() {
   form.value = emptyVisitorForm()
   acceptedRecord.value = null
   firedEmails.value = []
+  logOnErrors.value = []
+  duplicateRecord.value = null
   logOffMobile.value = ''
   logOffEmail.value = ''
   logOffError.value = ''
@@ -128,6 +133,9 @@ function capturingEmails(action: () => AttendanceRecord | null) {
 
 function submitLogOn() {
   if (buildingId.value === '') return
+  logOnErrors.value = visitorTimingErrors(form.value)
+  duplicateRecord.value = findVisitorOnSiteByContact(form.value.mobile, form.value.email)
+  if (logOnErrors.value.length || duplicateRecord.value) return
   const input = visitorInputFromForm(form.value, buildingId.value, staffContacts.value)
   acceptedRecord.value = capturingEmails(() => visitorSelfLogOn(input))
   view.value = 'loggedOn'
@@ -259,6 +267,14 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
     <form v-else-if="view === 'logon'" class="space-y-6" @submit.prevent="submitLogOn">
       <AccessItENoteCard code="V2" />
       <AccessItVisitorFields v-model="form" />
+      <ul v-if="logOnErrors.length" role="alert" class="space-y-1 rounded-lg bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+        <li v-for="message in logOnErrors" :key="message">{{ message }}</li>
+      </ul>
+      <div v-if="duplicateRecord" role="alert" class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+        <p class="font-semibold">You are already logged on at {{ duplicateRecord.buildingName }}.</p>
+        <p class="mt-1">Use Log off site when you leave.</p>
+        <button type="button" class="mt-3 inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100" @click="startLogOff"><LogOut class="size-4" /> Go to log off</button>
+      </div>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <button type="button" :class="secondaryButtonClass" @click="logOnStep = 0"><ArrowLeft class="size-4" /> Back</button>
         <button type="submit" :class="primaryButtonClass">Log on <ArrowRight class="size-4" /></button>
@@ -271,7 +287,7 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
         <CircleCheck class="size-6 shrink-0 text-emerald-600" />
         <p class="text-sm leading-6"><span class="font-semibold">{{ acceptedRecord.name }}</span>, you are logged on at {{ acceptedRecord.buildingName }} as of {{ formatDateTime(acceptedRecord.loggedOnAt) }}.</p>
       </div>
-      <AccessItENoteCard code="V3" tone="success" />
+      <AccessItENoteCard code="V3" tone="success" body-only />
       <AccessItVisitorPassCard :record="acceptedRecord" />
       <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p class="flex items-center gap-2 text-sm font-semibold text-slate-700"><Mail class="size-4 text-slate-500" /> Emails sent</p>
@@ -314,7 +330,7 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
         <CircleCheck class="size-6 shrink-0 text-emerald-600" />
         <p class="text-sm leading-6"><span class="font-semibold">{{ acceptedRecord.name }}</span>, your departure from {{ acceptedRecord.buildingName }} was recorded at {{ formatDateTime(acceptedRecord.loggedOffAt) }}. You are no longer on the on-site list.</p>
       </div>
-      <AccessItENoteCard code="V5" tone="success" />
+      <AccessItENoteCard code="V5" tone="success" body-only />
       <div class="flex justify-end">
         <button type="button" :class="primaryButtonClass" @click="finish">Done <ArrowRight class="size-4" /></button>
       </div>

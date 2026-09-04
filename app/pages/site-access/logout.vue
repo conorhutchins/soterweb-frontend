@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, BadgeCheck, LockKeyhole, Mail, Phone, UserRound, Wrench } from '@lucide/vue'
+import { ArrowRight, BadgeCheck, LockKeyhole, LogOut, Mail, Phone, UserRound, Wrench } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { assetsEligibleForUpdate } from '~/lib/access-it/compliance'
 import { LOG_OFF_OPTIONS } from '~/lib/access-it/config-defaults'
@@ -45,6 +45,8 @@ const chosenOption = ref<LogOffOption | null>(null)
 const activityKey = ref('')
 const activities = ref<AssetActivity[]>([])
 const outcome = ref<AttendanceRecord | null>(null)
+/** Set when an emailed link belongs to a visitor pass rather than a contractor record. */
+const visitorPassToken = ref('')
 
 const stepNames = computed(() => {
   const names = ['Identify', 'Leaving']
@@ -55,14 +57,14 @@ const stepNames = computed(() => {
 const stepLabels: Record<Step, string> = { identify: 'Identify', options: 'Leaving', assets: 'Asset register', done: 'Done' }
 const currentStepIndex = computed(() => Math.max(0, stepNames.value.indexOf(stepLabels[step.value])))
 
-const titles: Record<Step, { title: string, subtitle: string }> = {
+const titles = computed<Record<Step, { title: string, subtitle: string }>>(() => ({
   identify: { title: 'Log off site', subtitle: 'Tell us who you are so we can close your attendance.' },
   options: { title: 'How are you leaving?', subtitle: 'Choose the option that applies to your visit today.' },
   assets: { title: 'Asset register', subtitle: 'Record the assets you worked on before you leave.' },
-  done: { title: 'Logout accepted', subtitle: 'Thank you. Your attendance has been updated.' },
-}
+  done: { title: config.eNote('8').title || 'Logout accepted', subtitle: 'Thank you. Your attendance has been updated.' },
+}))
 
-const permits = computed(() => record.value?.organisationId ? directory.currentPermitsFor(record.value.organisationId, record.value.contractorId) : [])
+const permits = computed(() => record.value ? attendance.permitsAffectedByLogOff(record.value) : [])
 const permitReferences = computed(() => permits.value.map((permit) => permit.reference).join(', '))
 
 const options = computed(() => config.visibleLogOffOptions.value.map((option) => {
@@ -93,6 +95,11 @@ onMounted(() => {
   if (found?.type === 'Contractor' && found.status === 'On site') {
     record.value = found
     step.value = 'options'
+    return
+  }
+  if (found?.type === 'Visitor') {
+    visitorPassToken.value = token
+    notice.value = 'This link belongs to a visitor pass, so it is handled on the visitors screen.'
     return
   }
   notice.value = found ? 'That log off link has already been used, so the attendance record is closed.' : 'That log off link is not recognised. Identify yourself below instead.'
@@ -142,7 +149,8 @@ function continueFromOptions() {
 
 function chooseActivity(choice: ActivityChoice) {
   activityKey.value = choice.key
-  if (!choice.type) finish()
+  // A non-activity choice discards anything recorded so far; the contractor then confirms with Log off site.
+  if (!choice.type) activities.value = []
 }
 
 function addActivity(activity: AssetActivity) {
@@ -174,12 +182,12 @@ function finish() {
 <template>
   <AccessItKioskShell :title="titles[step].title" :subtitle="titles[step].subtitle" :steps="stepNames" :current-step="currentStepIndex" :wide="step === 'assets'">
     <form v-if="step === 'identify'" class="space-y-7" @submit.prevent="identify">
-      <p v-if="notice" class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ notice }}</p>
+      <p v-if="notice" class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ notice }} <NuxtLink v-if="visitorPassToken" :to="`/site-access/visitors?logoff=${visitorPassToken}`" class="font-semibold text-amber-900 underline underline-offset-2">Log off as a visitor</NuxtLink></p>
       <AccessItENoteCard code="6" />
 
       <div v-if="config.anonymousAccessAllowed.value" class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="How you logged on">
-        <button type="button" role="radio" :aria-checked="mode === 'account'" class="h-10 rounded-lg text-sm font-medium transition" :class="mode === 'account' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'account'">I have an account</button>
-        <button type="button" role="radio" :aria-checked="mode === 'anonymous'" class="h-10 rounded-lg text-sm font-medium transition" :class="mode === 'anonymous' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'anonymous'">I logged on without an account</button>
+        <button type="button" role="radio" :aria-checked="mode === 'account'" class="min-h-11 rounded-lg px-2 py-2 text-sm font-medium leading-tight transition" :class="mode === 'account' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'account'">I have an account</button>
+        <button type="button" role="radio" :aria-checked="mode === 'anonymous'" class="min-h-11 rounded-lg px-2 py-2 text-sm font-medium leading-tight transition" :class="mode === 'anonymous' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'anonymous'">I logged on without an account</button>
       </div>
 
       <div v-if="mode === 'account'" class="grid gap-4 sm:grid-cols-2">
@@ -189,7 +197,7 @@ function finish() {
         </label>
         <label class="block space-y-2">
           <span class="text-sm font-medium text-slate-700">Password</span>
-          <span class="relative block"><LockKeyhole class="pointer-events-none absolute left-3.5 top-3.5 size-5 text-slate-400" /><input v-model="credentials.password" type="password" autocomplete="current-password" placeholder="Your password" :class="inputClass" /></span>
+          <span class="relative block"><LockKeyhole class="pointer-events-none absolute left-3.5 top-3.5 size-5 text-slate-400" /><input v-model="credentials.password" type="password" autocomplete="off" placeholder="Your password" :class="inputClass" /></span>
         </label>
       </div>
       <div v-else class="grid gap-4 sm:grid-cols-2">
@@ -243,6 +251,11 @@ function finish() {
         <h2 class="text-base font-semibold text-ink">{{ selectedActivity.label }}</h2>
         <AccessItAssetActivityForm :key="selectedActivity.key" :assets="eligibleAssets" :type="selectedActivity.type" @next="addActivity" @finish="finishWithActivity" />
       </div>
+
+      <div v-else-if="selectedActivity" class="space-y-4 border-t border-slate-100 pt-7">
+        <p class="text-sm text-slate-600">No asset register changes will be recorded for this visit.</p>
+        <button type="button" class="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-soter-600 text-base font-semibold text-white shadow-sm transition hover:bg-soter-700 focus:outline-hidden focus:ring-3 focus:ring-soter-200" @click="finish"><LogOut class="size-5" /> Log off site</button>
+      </div>
     </div>
 
     <div v-else-if="step === 'done' && outcome" class="space-y-7">
@@ -254,7 +267,7 @@ function finish() {
         </div>
       </div>
 
-      <AccessItENoteCard code="8" tone="success" />
+      <AccessItENoteCard code="8" tone="success" body-only />
       <AccessItENoteCard code="9" />
 
       <dl class="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:grid-cols-2">

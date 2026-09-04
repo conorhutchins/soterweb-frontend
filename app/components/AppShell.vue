@@ -5,11 +5,12 @@ import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenu
 const { signOut } = useAuth()
 const router = useRouter()
 const route = useRoute()
+const { paramIsYes } = useAccessItConfig()
 
-const navigation = [
+const navigation = computed(() => [
   { label: 'Organisations', to: '/organisations' },
-  { label: 'Access IT', to: '/access-it' },
-]
+  ...(paramIsYes('System Menu Show Access IT Tab') ? [{ label: 'Access IT', to: '/access-it' }] : []),
+])
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(`${path}/`)

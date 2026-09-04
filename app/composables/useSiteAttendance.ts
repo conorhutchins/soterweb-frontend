@@ -1,3 +1,5 @@
+import { useNow } from '@vueuse/core'
+import type { Ref } from 'vue'
 import { LOG_OFF_OPTIONS } from '~/lib/access-it/config-defaults'
 import { renderTemplate } from '~/lib/access-it/templates'
 import { formatDateTime, hoursFromNow, todayAt } from '~/lib/access-it/time'
@@ -44,6 +46,8 @@ export interface ContractorLogOnInput {
   expectedLogOffAt: string
   anonymous: boolean
   workingWindowBasis: WorkingWindowBasis
+  /** The permit being worked under, when known. */
+  permitId?: number
 }
 
 export interface VisitorInput {
@@ -61,6 +65,14 @@ export interface VisitorInput {
   vehicleReg?: string
 }
 
+let clock: Ref<Date> | undefined
+
+/** A clock that ticks every 30 seconds so overdue and over-24-hour flags update without a mutation. Lives outside any component scope. */
+function sharedClock() {
+  if (!clock) clock = effectScope(true).run(() => useNow({ interval: 30_000 })) as Ref<Date>
+  return clock
+}
+
 function normaliseContact(value: string) {
   return value.replace(/\s+/g, '').toLowerCase()
 }
@@ -74,13 +86,22 @@ export function useSiteAttendance() {
   const { state: sentEmails, reset: resetEmails } = usePersistedState<SentEmail[]>('access-it-sent-emails', sentEmailFixture)
   const config = useAccessItConfig()
   const directory = useSiteDirectory()
+  const now = sharedClock()
 
   const onSite = computed(() => records.value.filter((record) => record.status === 'On site'))
   const contractorsOnSite = computed(() => onSite.value.filter((record) => record.type === 'Contractor'))
   const visitorsOnSite = computed(() => onSite.value.filter((record) => record.type === 'Visitor'))
   const expectedVisitors = computed(() => records.value.filter((record) => record.type === 'Visitor' && record.status === 'Expected'))
-  const onSiteOverExpectedTime = computed(() => onSite.value.filter((record) => new Date(record.expectedLogOffAt).getTime() < Date.now()))
-  const onSiteOver24Hours = computed(() => onSite.value.filter((record) => record.loggedOnAt && Date.now() - new Date(record.loggedOnAt).getTime() > 24 * 60 * 60 * 1000))
+  const onSiteOverExpectedTime = computed(() => onSite.value.filter((record) => isPastExpectedLogOff(record)))
+  const onSiteOver24Hours = computed(() => onSite.value.filter((record) => isOnSiteOver24Hours(record)))
+
+  function isPastExpectedLogOff(record: AttendanceRecord) {
+    return record.status === 'On site' && new Date(record.expectedLogOffAt).getTime() < now.value.getTime()
+  }
+
+  function isOnSiteOver24Hours(record: AttendanceRecord) {
+    return record.status === 'On site' && Boolean(record.loggedOnAt) && now.value.getTime() - new Date(record.loggedOnAt as string).getTime() > 24 * 60 * 60 * 1000
+  }
 
   function recordById(id: number) {
     return records.value.find((record) => record.id === id)
@@ -161,6 +182,7 @@ export function useSiteAttendance() {
       reason: input.reason,
       anonymous: input.anonymous,
       workingWindowBasis: input.workingWindowBasis,
+      permitId: input.permitId,
     }
     records.value.unshift(record)
 
@@ -168,6 +190,22 @@ export function useSiteAttendance() {
     if (input.reason === 'B') sendAutomation('00004900', directory.siteProfile.dutyManagerEmail, contextFor(record))
 
     return record
+  }
+
+  /**
+   * The permits a log off option may suspend or close: the permit recorded at log on, or failing that
+   * the current permits at the same building held by this operative or organisation-wide. Anonymous
+   * operatives never touch permits assigned to a named colleague.
+   */
+  function permitsAffectedByLogOff(record: AttendanceRecord) {
+    if (!record.organisationId) return []
+    if (record.permitId) {
+      const permit = directory.permits.value.find((candidate) => candidate.id === record.permitId && candidate.status !== 'Closed')
+      return permit ? [permit] : []
+    }
+    return directory.currentPermitsFor(record.organisationId, record.contractorId).filter((permit) =>
+      permit.buildingId === record.buildingId && (!permit.contractorId || permit.contractorId === record.contractorId),
+    )
   }
 
   function logOffContractor(recordId: number, option: LogOffOption, assetActivities: AssetActivity[] = []) {
@@ -178,9 +216,8 @@ export function useSiteAttendance() {
     record.logOffOption = option
     if (assetActivities.length) record.assetActivities = [...(record.assetActivities ?? []), ...assetActivities]
 
-    if (chosen?.permitAction !== 'none' && record.organisationId) {
-      const permits = directory.currentPermitsFor(record.organisationId, record.contractorId)
-      for (const permit of permits) directory.setPermitStatus(permit.id, chosen?.permitAction === 'close' ? 'Closed' : 'Suspended')
+    if (chosen && chosen.permitAction !== 'none') {
+      for (const permit of permitsAffectedByLogOff(record)) directory.setPermitStatus(permit.id, chosen.permitAction === 'close' ? 'Closed' : 'Suspended')
     }
 
     if (!chosen || !chosen.remainsOnSite) {
@@ -257,7 +294,7 @@ export function useSiteAttendance() {
       hostContactId: input.hostContactId,
       hostEmail: input.hostEmail,
       description: input.description,
-      expectedArrivalAt: input.expectedArrivalAt,
+      expectedArrivalAt: input.expectedArrivalAt ?? record.expectedArrivalAt,
       expectedLogOffAt: input.expectedLogOffAt,
       vehicleReg: input.vehicleReg,
     })
@@ -327,6 +364,10 @@ export function useSiteAttendance() {
   return {
     records,
     sentEmails,
+    now,
+    isPastExpectedLogOff,
+    isOnSiteOver24Hours,
+    permitsAffectedByLogOff,
     onSite,
     contractorsOnSite,
     visitorsOnSite,

@@ -1,7 +1,7 @@
 // The decisions Access IT makes at the point of entry. Pure functions: no store access, no side
 // effects, so they can be unit tested and later mirrored by the API.
 import type { Asset, Building, Contractor, ContractorOrganisation, Permit, WorkingWindowBasis } from '~/types/access-it'
-import { clockIsSet, hasExpired, minutesFromClock, minutesOfDay, withinWindow } from './time'
+import { clockIsSet, formatIsoDay, hasExpired, isoDate, minutesFromClock, minutesOfDay, withinWindow } from './time'
 
 /** Read a parameter value by key. Provided by the config store. */
 export type ParameterLookup = (key: string) => string
@@ -13,7 +13,7 @@ export interface ComplianceCheckResult {
   label: string
   level: 'Individual' | 'Organisation'
   parameter: string
-  /** Whether the organisation has switched this check on. */
+  /** Whether the check actually ran: switched on by its parameter and applicable to this person. */
   enabled: boolean
   passed: boolean
   detail: string
@@ -27,17 +27,20 @@ interface ComplianceInput {
 }
 
 function expiryDetail(subject: string, expiry: string, now: Date) {
+  if (!expiry) return { passed: false, detail: `No ${subject.toLowerCase()} expiry recorded` }
   const expired = hasExpired(expiry, now)
   return {
     passed: !expired,
-    detail: expired ? `${subject} expired on ${new Date(expiry).toLocaleDateString('en-GB')}` : `${subject} valid until ${new Date(expiry).toLocaleDateString('en-GB')}`,
+    detail: expired ? `${subject} expired on ${formatIsoDay(expiry)}` : `${subject} valid until ${formatIsoDay(expiry)}`,
   }
 }
 
+const NOT_APPLICABLE = { enabled: false, passed: true, detail: 'Not applicable: no individual record for an anonymous log on' }
+
 /**
  * Run the five compliance checks. Accreditation, insurance and RAMS belong to the organisation.
- * Induction and certification belong to the person, so they are skipped for anonymous log ons
- * where no individual record exists.
+ * Induction and certification belong to the person, so they cannot run for anonymous log ons
+ * where no individual record exists; they are reported as not applicable rather than passed.
  */
 export function runComplianceChecks({ contractor, organisation, param, now = new Date() }: ComplianceInput): ComplianceCheckResult[] {
   const yes = (key: string) => param(key) === 'Yes'
@@ -47,8 +50,9 @@ export function runComplianceChecks({ contractor, organisation, param, now = new
     label: 'Induction',
     level: 'Individual',
     parameter: 'Site Access Check Induction Expiry',
-    enabled: yes('Site Access Check Induction Expiry'),
-    ...(contractor ? expiryDetail('Induction', contractor.inductionExpiry, now) : { passed: true, detail: 'No individual record (anonymous log on)' }),
+    ...(contractor
+      ? { enabled: yes('Site Access Check Induction Expiry'), ...expiryDetail('Induction', contractor.inductionExpiry, now) }
+      : NOT_APPLICABLE),
   }
 
   const insurance: ComplianceCheckResult = {
@@ -74,8 +78,9 @@ export function runComplianceChecks({ contractor, organisation, param, now = new
     label: 'Mandatory operative certification',
     level: 'Individual',
     parameter: 'Site Access Check Org Contact Certificate Expiry',
-    enabled: yes('Site Access Check Org Contact Certificate Expiry'),
-    ...(contractor ? expiryDetail(contractor.certificateName, contractor.certificateExpiry, now) : { passed: true, detail: 'No individual record (anonymous log on)' }),
+    ...(contractor
+      ? { enabled: yes('Site Access Check Org Contact Certificate Expiry'), ...expiryDetail(contractor.certificateName, contractor.certificateExpiry, now) }
+      : NOT_APPLICABLE),
   }
 
   const rams: ComplianceCheckResult = {
@@ -135,7 +140,7 @@ export function evaluateWorkingWindow({ organisation, contractor, buildingId, pe
   const flexHours = describeHours(clockIsSet(flexStart) ? flexStart : coreStart, clockIsSet(flexFinish) ? flexFinish : coreFinish)
   const base = { showFlexMessage: false, coreHours, flexHours }
 
-  if (!clockIsSet(coreStart) || !clockIsSet(coreFinish)) {
+  if (!clockIsSet(coreStart) || !clockIsSet(coreFinish) || coreStart === coreFinish) {
     return { ...base, allowed: true, basis: 'Checks disabled' }
   }
 
@@ -149,16 +154,16 @@ export function evaluateWorkingWindow({ organisation, contractor, buildingId, pe
     return { ...base, allowed: true, basis: 'Core hours' }
   }
 
-  const permit = findOutOfHoursPermit({ permits, organisation, contractor, buildingId, now })
-  if (permit) {
-    return { ...base, allowed: true, basis: 'Permit', permit }
-  }
-
   const windowStart = clockIsSet(flexStart) ? minutesFromClock(flexStart) : minutesFromClock(coreStart)
   const windowFinish = clockIsSet(flexFinish) ? minutesFromClock(flexFinish) : minutesFromClock(coreFinish)
 
   if (withinWindow(minutes, windowStart, windowFinish)) {
     return { ...base, allowed: true, basis: 'Flex period', showFlexMessage: true }
+  }
+
+  const permit = findOutOfHoursPermit({ permits, organisation, contractor, buildingId, now })
+  if (permit) {
+    return { ...base, allowed: true, basis: 'Permit', permit }
   }
 
   return { ...base, allowed: false, basis: 'Core hours', denialCode: '5D' }
@@ -172,9 +177,9 @@ interface PermitSearch {
   now?: Date
 }
 
-function permitIsCurrent(permit: Permit, now: Date) {
-  const today = now.toISOString().slice(0, 10)
-  return (permit.status === 'Approved' || permit.status === 'Live') && permit.validFrom <= today && permit.validTo >= today
+function permitIsCurrent(permit: Permit, now: Date, statuses: Permit['status'][] = ['Approved', 'Live']) {
+  const today = isoDate(now)
+  return statuses.includes(permit.status) && permit.validFrom <= today && permit.validTo >= today
 }
 
 /** A current permit authorising this person (or their organisation) to work out of hours at the building. */
@@ -188,9 +193,19 @@ export function findOutOfHoursPermit({ permits, organisation, contractor, buildi
   )
 }
 
+/** Current permits this person could be working under at the building: their own, or organisation-wide ones. */
+export function findPermitsForAttendance({ permits, organisation, contractor, buildingId, now = new Date() }: PermitSearch) {
+  return permits.filter((permit) =>
+    permitIsCurrent(permit, now)
+    && permit.buildingId === buildingId
+    && permit.organisationId === organisation.id
+    && (!permit.contractorId || permit.contractorId === contractor?.id),
+  )
+}
+
 /** Live permits at the same building held by other organisations: work that may conflict. */
 export function findPotentialConflicts(permits: Permit[], buildingId: number, organisationId: number, now = new Date()) {
-  return permits.filter((permit) => permit.buildingId === buildingId && permit.organisationId !== organisationId && permitIsCurrent(permit, now))
+  return permits.filter((permit) => permit.buildingId === buildingId && permit.organisationId !== organisationId && permitIsCurrent(permit, now, ['Live']))
 }
 
 /** The asbestos screen appears where the location is flagged and the organisation is likely to disturb the fabric. */

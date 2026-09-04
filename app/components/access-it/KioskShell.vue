@@ -3,7 +3,7 @@ import { Building2, House } from '@lucide/vue'
 import { siteProfile } from '~/composables/useSiteDirectory'
 
 // The public frame contractors and visitors see. Branded with the client organisation, never the wider system.
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   title?: string
   subtitle?: string
   /** Names of the journey steps, shown as a progress strip when provided. */
@@ -12,6 +12,13 @@ withDefaults(defineProps<{
   /** Widen the card for table-like content such as the asset register. */
   wide?: boolean
 }>(), { steps: () => [], currentStep: 0, wide: false })
+
+// Each wizard step swaps the heading; moving focus there keeps screen readers and keyboards oriented.
+const heading = ref<HTMLHeadingElement | null>(null)
+watch(() => props.title, async () => {
+  await nextTick()
+  heading.value?.focus({ preventScroll: true })
+})
 </script>
 
 <template>
@@ -33,13 +40,13 @@ withDefaults(defineProps<{
       <ol v-if="steps.length" class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-500" aria-label="Progress">
         <li v-for="(step, index) in steps" :key="step" class="flex items-center gap-2" :aria-current="index === currentStep ? 'step' : undefined">
           <span class="flex size-6 items-center justify-center rounded-full text-[11px] font-semibold" :class="index < currentStep ? 'bg-emerald-500 text-white' : index === currentStep ? 'bg-soter-600 text-white' : 'bg-slate-200 text-slate-500'">{{ index + 1 }}</span>
-          <span :class="index === currentStep ? 'text-ink' : ''">{{ step }}</span>
+          <span :class="index === currentStep ? 'text-ink' : 'hidden sm:inline'">{{ step }}</span>
         </li>
       </ol>
 
       <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
         <header v-if="title" class="mb-8">
-          <h1 class="text-3xl font-semibold tracking-tight text-ink">{{ title }}</h1>
+          <h1 ref="heading" tabindex="-1" class="text-3xl font-semibold tracking-tight text-ink outline-hidden">{{ title }}</h1>
           <p v-if="subtitle" class="mt-2 text-base leading-7 text-slate-500">{{ subtitle }}</p>
         </header>
         <slot />

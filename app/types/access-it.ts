@@ -145,7 +145,7 @@ export type LogOffOption = 'A' | 'B' | 'C' | 'D' | 'E'
 export type AttendanceType = 'Contractor' | 'Visitor'
 export type AttendanceStatus = 'Expected' | 'On site' | 'Departed'
 export type VisitorSource = 'Self service' | 'Reception' | 'Pre-booked'
-export type WorkingWindowBasis = 'Checks disabled' | 'Core hours' | 'Flex period' | 'Permit' | 'Approved organisation'
+export type WorkingWindowBasis = 'Checks disabled' | 'Core hours' | 'Flex period' | 'Permit' | 'Approved organisation' | 'Emergency work'
 
 /** One attendance: a contractor or visitor, expected, on site or departed. */
 export interface AttendanceRecord {
@@ -175,6 +175,8 @@ export interface AttendanceRecord {
   reason?: LogOnReason
   anonymous?: boolean
   workingWindowBasis?: WorkingWindowBasis
+  /** The permit the contractor is working under, so log off acts on that permit only. */
+  permitId?: number
   logOffOption?: LogOffOption
   assetActivities?: AssetActivity[]
   // Visitor detail

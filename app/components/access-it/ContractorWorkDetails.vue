@@ -4,7 +4,11 @@ import { maximumStayHours } from '~/lib/access-it/compliance'
 import { fromDateTimeLocal, hoursBetween, hoursFromNow, toDateTimeLocal } from '~/lib/access-it/time'
 import type { ContractorIdentity, ContractorWorkDetails } from '~/types/access-it'
 
-const props = defineProps<{ identity: ContractorIdentity }>()
+const props = defineProps<{
+  identity: ContractorIdentity
+  /** A problem found after submission, for example no permit for reason C. */
+  notice?: string
+}>()
 const emit = defineEmits<{ submit: [details: ContractorWorkDetails] }>()
 
 const directory = useSiteDirectory()
@@ -104,7 +108,7 @@ function submit() {
       </label>
     </div>
 
-    <p v-if="error" role="alert" class="text-sm font-medium text-rose-600">{{ error }}</p>
+    <p v-if="error || props.notice" role="alert" class="text-sm font-medium text-rose-600">{{ error || props.notice }}</p>
 
     <button type="submit" class="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-soter-600 text-base font-semibold text-white shadow-sm transition hover:bg-soter-700 focus:outline-hidden focus:ring-3 focus:ring-soter-200">Continue <ArrowRight class="size-5" /></button>
   </form>

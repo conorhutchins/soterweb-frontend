@@ -20,7 +20,7 @@ defineEmits<{ restart: [] }>()
       <p class="text-sm font-semibold uppercase tracking-[0.08em]">Entry refused</p>
     </div>
 
-    <AccessItENoteCard code="5" tone="danger" />
+    <AccessItENoteCard code="5" tone="danger" body-only />
     <AccessItENoteCard :code="reasonCode" tone="warning" />
 
     <div v-if="checks?.length" class="space-y-2">

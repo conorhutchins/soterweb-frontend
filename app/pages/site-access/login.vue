@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { BadgeCheck, CircleCheck, Mail, MailCheck, Phone, TriangleAlert } from '@lucide/vue'
 import { toast } from 'vue-sonner'
-import { complianceFailures, evaluateWorkingWindow, findPotentialConflicts, requiresAsbestosAcknowledgement, requiresRamsAcknowledgement, runComplianceChecks, type ComplianceCheckResult, type WorkingWindowResult } from '~/lib/access-it/compliance'
+import { complianceFailures, evaluateWorkingWindow, findPermitsForAttendance, findPotentialConflicts, requiresAsbestosAcknowledgement, requiresRamsAcknowledgement, runComplianceChecks, type ComplianceCheckResult, type WorkingWindowResult } from '~/lib/access-it/compliance'
 import { formatDateTime, formatTime } from '~/lib/access-it/time'
-import type { AttendanceRecord, ContractorIdentity, ContractorWorkDetails, LogOnReason } from '~/types/access-it'
+import type { AttendanceRecord, ContractorIdentity, ContractorWorkDetails, LogOnReason, Permit } from '~/types/access-it'
 
 definePageMeta({ layout: false })
 
@@ -18,11 +18,14 @@ const inputClass = 'h-12 w-full rounded-xl border border-slate-200 bg-white pl-1
 
 const step = ref<Step>('identify')
 const identifyNotice = ref('')
+const detailsNotice = ref('')
 const identity = ref<ContractorIdentity | null>(null)
 const reason = ref<LogOnReason | null>(null)
 const details = ref<ContractorWorkDetails | null>(null)
 const checks = ref<ComplianceCheckResult[]>([])
 const windowResult = ref<WorkingWindowResult | null>(null)
+/** The permit the contractor is attending under (reason C), if any. */
+const workPermit = ref<Permit | null>(null)
 const denialCode = ref<DenialCode>('5A')
 const contact = reactive({ mobile: '', email: '' })
 const savedRecord = ref<AttendanceRecord | null>(null)
@@ -41,17 +44,17 @@ const stepNames = computed(() => {
 const stepLabels: Record<Step, string> = { identify: 'Identify', confirm: 'Confirm', details: 'Work details', flex: 'Work details', asbestos: 'Asbestos', rams: 'RAMS', accepted: 'Accepted', complete: 'Accepted', denied: '' }
 const currentStepIndex = computed(() => Math.max(0, stepNames.value.indexOf(stepLabels[step.value])))
 
-const titles: Record<Step, { title: string, subtitle: string }> = {
+const titles = computed<Record<Step, { title: string, subtitle: string }>>(() => ({
   identify: { title: 'Log on to site', subtitle: 'Tell us who you are and why you are attending.' },
   confirm: { title: 'Before you continue', subtitle: 'Read and accept the site conditions.' },
   details: { title: 'Work details', subtitle: 'Where you are working, what you are doing and when you expect to leave.' },
   flex: { title: 'Outside core hours', subtitle: 'You are logging on within the flex period.' },
   asbestos: { title: 'Asbestos warning', subtitle: 'This location is flagged as containing asbestos.' },
   rams: { title: 'Risk assessments and method statements', subtitle: 'Your organisation is registered for high risk work.' },
-  accepted: { title: 'Login accepted', subtitle: 'Confirm your contact details and review any potential conflicts.' },
+  accepted: { title: config.eNote('4').title || 'Login accepted', subtitle: 'Confirm your contact details and review any potential conflicts.' },
   complete: { title: 'You are logged on', subtitle: 'Your attendance has been recorded.' },
-  denied: { title: 'Access denied', subtitle: 'You cannot log on to site at the moment.' },
-}
+  denied: { title: config.eNote('5').title || 'Access denied', subtitle: 'You cannot log on to site at the moment.' },
+}))
 
 const conflicts = computed(() => {
   if (!identity.value || !details.value) return []
@@ -68,9 +71,13 @@ const workingWindowBadge = computed(() => {
     case 'Flex period': return { label: `Flex period (core hours ${result.coreHours})`, tone: 'warning' as const }
     case 'Permit': return { label: `Out of hours: authorised by permit ${result.permit?.reference ?? ''}`, tone: 'info' as const }
     case 'Approved organisation': return { label: 'Out of hours: approved organisation', tone: 'info' as const }
+    case 'Emergency work': return { label: 'Emergency work: outside normal hours permitted', tone: 'warning' as const }
   }
   return null
 })
+
+const savedPermit = computed(() => directory.permits.value.find((permit) => permit.id === savedRecord.value?.permitId) ?? null)
+const permitRequested = computed(() => reason.value === 'D' || reason.value === 'E')
 
 const notifications = computed(() => {
   if (!identity.value) return []
@@ -83,11 +90,13 @@ const notifications = computed(() => {
 function restart() {
   step.value = 'identify'
   identifyNotice.value = ''
+  detailsNotice.value = ''
   identity.value = null
   reason.value = null
   details.value = null
   checks.value = []
   windowResult.value = null
+  workPermit.value = null
   savedRecord.value = null
 }
 
@@ -111,11 +120,27 @@ function declineAcceptance() {
 function onDetails(submitted: ContractorWorkDetails) {
   if (!identity.value) return
   details.value = submitted
+  detailsNotice.value = ''
+  workPermit.value = null
 
   checks.value = runComplianceChecks({ contractor: identity.value.contractor, organisation: identity.value.organisation, param: config.param })
   if (complianceFailures(checks.value).length) return deny('5A')
 
-  windowResult.value = evaluateWorkingWindow({ organisation: identity.value.organisation, contractor: identity.value.contractor, buildingId: submitted.building.id, permits: directory.permits.value, param: config.param })
+  // Reason C means work under an approved permit, so one must exist for this organisation at this building.
+  if (reason.value === 'C') {
+    const [permit] = findPermitsForAttendance({ permits: directory.permits.value, organisation: identity.value.organisation, contractor: identity.value.contractor, buildingId: submitted.building.id })
+    if (!permit) {
+      detailsNotice.value = 'No current permit was found for your organisation at this building. Choose another reason or contact the estates helpdesk.'
+      return
+    }
+    workPermit.value = permit
+  }
+
+  const evaluated = evaluateWorkingWindow({ organisation: identity.value.organisation, contractor: identity.value.contractor, buildingId: submitted.building.id, permits: directory.permits.value, param: config.param })
+  // Essential emergency work is admitted at any hour; the duty manager is notified instead (automation 00004900).
+  windowResult.value = reason.value === 'B'
+    ? { ...evaluated, allowed: true, basis: 'Emergency work', showFlexMessage: false, permit: undefined, denialCode: undefined }
+    : evaluated
   if (!windowResult.value.allowed) return deny('5D')
 
   if (windowResult.value.showFlexMessage) {
@@ -161,9 +186,11 @@ function confirmLogOn() {
     expectedLogOffAt: details.value.expectedLogOffAt,
     anonymous: identity.value.anonymous,
     workingWindowBasis: windowResult.value.basis,
+    permitId: windowResult.value.permit?.id ?? workPermit.value?.id,
   })
 
   if (windowResult.value.permit) directory.setPermitStatus(windowResult.value.permit.id, 'Live')
+  else if (workPermit.value?.status === 'Approved') directory.setPermitStatus(workPermit.value.id, 'Live')
 
   savedRecord.value = record
   step.value = 'complete'
@@ -177,7 +204,7 @@ function confirmLogOn() {
 
     <AccessItContractorAcknowledge v-else-if="step === 'confirm'" :code="reason === 'B' ? '2a' : '2'" @yes="step = 'details'" @no="declineAcceptance" />
 
-    <AccessItContractorWorkDetails v-else-if="step === 'details' && identity" :identity="identity" @submit="onDetails" />
+    <AccessItContractorWorkDetails v-else-if="step === 'details' && identity" :identity="identity" :notice="detailsNotice" @submit="onDetails" />
 
     <AccessItContractorAcknowledge v-else-if="step === 'flex'" code="2A" tone="warning" :context="{ CoreHours: windowResult?.coreHours }" @yes="proceedAfterWindow" @no="restart" />
 
@@ -186,7 +213,7 @@ function confirmLogOn() {
     <AccessItContractorAcknowledge v-else-if="step === 'rams'" code="3B" tone="warning" @yes="openAccepted" @no="deny('5C')" />
 
     <form v-else-if="step === 'accepted' && identity && details" class="space-y-7" @submit.prevent="confirmLogOn">
-      <AccessItENoteCard code="4" tone="success" />
+      <AccessItENoteCard code="4" tone="success" body-only />
 
       <div class="flex flex-wrap items-center gap-3 text-sm">
         <AccessItStatusPill v-if="workingWindowBadge" :label="workingWindowBadge.label" :tone="workingWindowBadge.tone" />
@@ -233,7 +260,10 @@ function confirmLogOn() {
         <div><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Building</dt><dd class="mt-1 font-medium text-ink">{{ savedRecord.buildingName }} · {{ savedRecord.locationOrHost }}</dd></div>
         <div><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Expected log off</dt><dd class="mt-1 font-medium text-ink">{{ formatDateTime(savedRecord.expectedLogOffAt) }}</dd></div>
         <div class="sm:col-span-2"><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Work</dt><dd class="mt-1 font-medium text-ink">{{ savedRecord.description }}</dd></div>
+        <div v-if="savedPermit" class="sm:col-span-2"><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Permit</dt><dd class="mt-1 font-medium text-ink"><span class="font-mono text-xs text-soter-700">{{ savedPermit.reference }}</span> · {{ savedPermit.description }} <span class="text-xs font-normal text-slate-500">({{ savedPermit.status }})</span></dd></div>
       </dl>
+
+      <p v-if="permitRequested" class="rounded-xl border border-soter-100 bg-soter-50 px-4 py-3 text-sm text-soter-700">Your permit request has been passed to the Permit to Work team.</p>
 
       <section class="space-y-2">
         <h2 class="text-sm font-semibold text-ink">Notifications</h2>

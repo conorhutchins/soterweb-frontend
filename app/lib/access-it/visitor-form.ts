@@ -68,3 +68,30 @@ export function visitorInputFromForm(form: VisitorFormState, buildingId: number,
     vehicleReg: form.vehicleReg.trim() || undefined,
   }
 }
+
+export interface VisitorTimingOptions {
+  /** Pre-booked visits: the expected arrival as a datetime-local string. */
+  expectedArrivalAt?: string
+  now?: Date
+}
+
+/**
+ * Timing problems with a visitor form, as plain messages. Empty when the times make sense: the
+ * expected log off must be in the future, and a pre-booked arrival must be in the future and before the log off.
+ */
+export function visitorTimingErrors(form: VisitorFormState, { expectedArrivalAt, now = new Date() }: VisitorTimingOptions = {}) {
+  const errors: string[] = []
+  const logOff = new Date(form.expectedLogOffAt).getTime()
+  if (Number.isNaN(logOff)) errors.push('Enter an expected log off time.')
+  else if (logOff <= now.getTime()) errors.push('The expected log off time must be in the future.')
+
+  if (expectedArrivalAt !== undefined) {
+    const arrival = new Date(expectedArrivalAt).getTime()
+    if (Number.isNaN(arrival)) errors.push('Enter an expected arrival time.')
+    else {
+      if (arrival <= now.getTime()) errors.push('The expected arrival time must be in the future.')
+      if (!Number.isNaN(logOff) && logOff <= arrival) errors.push('The expected log off must be after the expected arrival.')
+    }
+  }
+  return errors
+}

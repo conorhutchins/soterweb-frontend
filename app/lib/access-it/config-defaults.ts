@@ -58,7 +58,7 @@ const parameterSeeds: ParameterSeed[] = [
 export const defaultParameters: SystemParameter[] = parameterSeeds.map((seed) => ({ ...seed, value: seed.value ?? seed.defaultValue }))
 
 export const defaultENotes: ENote[] = [
-  { code: '1', group: 'Log on', screen: 'Log on main screen', title: 'Log in to site', body: 'Enter your username and password, then choose the reason you are attending today.' },
+  { code: '1', group: 'Log on', screen: 'Log on main screen', title: 'Log in to site', body: 'Enter your username and password, or log on without an account if your organisation has given you a code, then choose the reason you are attending today.' },
   { code: '2', group: 'Log on', screen: 'Log on compliance message', title: 'Working safely on site', body: "You agree to work safely and in accordance with the organisation's expectations, site rules and any permit conditions that apply to your work." },
   { code: '2a', group: 'Log on', screen: 'Log on compliance message, emergency work', title: 'Essential emergency work', body: 'Emergency work must be limited to making the situation safe. Report to the duty manager on arrival and before any intrusive work begins.' },
   { code: '2A', group: 'Log on', screen: 'Log on out of hours message', title: 'You are logging on outside core hours', body: 'The working hours for contractors are [CoreHours]. Please endeavour to carry out all work within these times. If you need to work outside of these hours you should obtain an Out of Hours Authorisation.' },

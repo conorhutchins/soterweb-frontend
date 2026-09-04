@@ -17,6 +17,8 @@ const emit = defineEmits<{
   logOff: [record: AttendanceRecord]
 }>()
 
+const { now, isPastExpectedLogOff, isOnSiteOver24Hours } = useSiteAttendance()
+
 const searchTerm = ref('')
 const sorting = ref<SortingState>([])
 
@@ -67,17 +69,9 @@ function columnLabel(columnId: string) {
   return columns.find((column) => ('accessorKey' in column && column.accessorKey === columnId) || column.id === columnId)?.header ?? ''
 }
 
-function isOverdue(record: AttendanceRecord) {
-  return record.status === 'On site' && new Date(record.expectedLogOffAt).getTime() < Date.now()
-}
-
-function isOver24Hours(record: AttendanceRecord) {
-  return record.status === 'On site' && Boolean(record.loggedOnAt) && Date.now() - new Date(record.loggedOnAt as string).getTime() > 24 * 60 * 60 * 1000
-}
-
 function duration(record: AttendanceRecord) {
   if (!record.loggedOnAt) return '—'
-  return describeDuration(record.loggedOnAt, record.loggedOffAt ?? new Date().toISOString())
+  return describeDuration(record.loggedOnAt, record.loggedOffAt ?? now.value.toISOString())
 }
 </script>
 
@@ -117,11 +111,11 @@ function duration(record: AttendanceRecord) {
             <td class="max-w-[240px] px-4 py-3.5 text-slate-600">{{ row.original.description }}</td>
             <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">{{ formatDateTime(row.original.loggedOnAt) }}</td>
             <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">
-              <span class="flex items-center gap-2">{{ formatDateTime(row.original.expectedLogOffAt) }}<AccessItStatusPill v-if="isOverdue(row.original)" label="Overdue" tone="danger" /></span>
+              <span class="flex items-center gap-2">{{ formatDateTime(row.original.expectedLogOffAt) }}<AccessItStatusPill v-if="isPastExpectedLogOff(row.original)" label="Overdue" tone="danger" /></span>
             </td>
             <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">
               <span v-if="history">{{ formatDateTime(row.original.loggedOffAt) }}</span>
-              <span v-else class="flex items-center gap-2">{{ duration(row.original) }}<AccessItStatusPill v-if="isOver24Hours(row.original)" label="> 24h" tone="warning" /></span>
+              <span v-else class="flex items-center gap-2">{{ duration(row.original) }}<AccessItStatusPill v-if="isOnSiteOver24Hours(row.original)" label="> 24h" tone="warning" /></span>
             </td>
             <td class="px-4 py-3.5 text-right">
               <DropdownMenuRoot>

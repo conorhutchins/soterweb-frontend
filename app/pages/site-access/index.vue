@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Clock, KeyRound, LogIn, LogOut, Users } from '@lucide/vue'
+import { ArrowRight, Clock, LogIn, LogOut, Users } from '@lucide/vue'
 import { clockIsSet } from '~/lib/access-it/time'
 
 definePageMeta({ layout: false })
@@ -29,29 +29,6 @@ const actions = computed(() => [
     : []),
 ])
 
-const demoHints: Record<string, string> = {
-  contractor1: 'Fully compliant. PPM contractor for Energy Centre assets, so the asset register is offered at log off. Sees the RAMS acknowledgement.',
-  contractor2: 'Asbestos acknowledgement in flagged buildings. Log on to Priory House to see conflicting permits.',
-  contractor3: 'Refused: the organisation\'s insurance has expired.',
-  contractor4: 'Refused: personal induction has expired.',
-  contractor5: 'Organisation approved for out of hours work, so no time checks apply.',
-  contractor6: 'Refused: operative certificate has expired.',
-  contractor7: 'Holds an out of hours permit for the Library, so may log on outside core hours there.',
-  contractor8: 'Refused: the organisation\'s RAMS have expired.',
-}
-
-const demoAccounts = computed(() => directory.contractors.value
-  .filter((contractor) => demoHints[contractor.username])
-  .map((contractor) => ({
-    username: contractor.username,
-    name: directory.contractorFullName(contractor),
-    organisation: directory.organisationById(contractor.organisationId)?.name ?? '',
-    hint: demoHints[contractor.username] ?? '',
-  })))
-
-const companyCodes = computed(() => directory.organisations.value.map((organisation) => organisation.code).join(', '))
-const verificationCode = computed(() => config.param('Site Access Allow Anonymous Verification Code'))
-const showDemoPanel = ref(false)
 </script>
 
 <template>
@@ -82,22 +59,6 @@ const showDemoPanel = ref(false)
         </div>
         <p v-else class="flex-1 text-sm text-slate-600"><span class="font-medium text-ink">No time restrictions</span> apply to contractor attendance at this site.</p>
       </div>
-
-      <section class="rounded-2xl border border-dashed border-slate-300 bg-white/60">
-        <button type="button" class="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-sm font-medium text-slate-600 transition hover:text-ink" :aria-expanded="showDemoPanel" @click="showDemoPanel = !showDemoPanel">
-          <span class="flex items-center gap-2"><KeyRound class="size-4 text-slate-400" /> Demo accounts for this proof of concept</span>
-          <span class="text-xs text-slate-400">{{ showDemoPanel ? 'Hide' : 'Show' }}</span>
-        </button>
-        <div v-if="showDemoPanel" class="border-t border-slate-200 px-5 py-4">
-          <p class="text-xs text-slate-500">Every account uses the password <strong class="font-semibold text-slate-700">demo</strong>. Anonymous log on accepts verification code <strong class="font-semibold text-slate-700">{{ verificationCode }}</strong> with company codes {{ companyCodes }}.</p>
-          <ul class="mt-3 grid gap-2 sm:grid-cols-2">
-            <li v-for="account in demoAccounts" :key="account.username" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-              <p class="flex flex-wrap items-baseline gap-x-2"><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-soter-700">{{ account.username }}</code><span class="font-medium text-ink">{{ account.name }}</span><span class="text-xs text-slate-400">{{ account.organisation }}</span></p>
-              <p class="mt-1 text-xs leading-5 text-slate-500">{{ account.hint }}</p>
-            </li>
-          </ul>
-        </div>
-      </section>
     </div>
   </AccessItKioskShell>
 </template>

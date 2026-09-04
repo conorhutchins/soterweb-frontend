@@ -18,6 +18,8 @@ const emit = defineEmits<{
   remove: [visitor: AttendanceRecord]
 }>()
 
+const { isPastExpectedLogOff } = useSiteAttendance()
+
 const searchTerm = ref('')
 const sorting = ref<SortingState>([])
 
@@ -67,10 +69,6 @@ function columnLabel(columnId: string) {
   return columns.find((column) => column.id === columnId)?.header ?? ''
 }
 
-function isOverdue(visitor: AttendanceRecord) {
-  return visitor.status === 'On site' && new Date(visitor.expectedLogOffAt).getTime() < Date.now()
-}
-
 const statusTone: Record<AttendanceRecord['status'], 'info' | 'success' | 'neutral'> = {
   'Expected': 'info',
   'On site': 'success',
@@ -105,7 +103,7 @@ const statusTone: Record<AttendanceRecord['status'], 'info' | 'success' | 'neutr
           <td class="px-5 py-4">
             <div class="flex flex-wrap items-center gap-1.5">
               <AccessItStatusPill :label="row.original.status" :tone="statusTone[row.original.status]" />
-              <AccessItStatusPill v-if="isOverdue(row.original)" label="Overdue" tone="danger" />
+              <AccessItStatusPill v-if="isPastExpectedLogOff(row.original)" label="Overdue" tone="danger" />
             </div>
           </td>
           <td class="min-w-52 px-5 py-4">
@@ -120,7 +118,7 @@ const statusTone: Record<AttendanceRecord['status'], 'info' | 'success' | 'neutr
           <td class="px-5 py-4 whitespace-nowrap text-slate-600">
             <span v-if="row.original.status === 'Expected'" class="text-xs uppercase tracking-[0.06em] text-soter-700">Due </span>{{ formatDateTime(arrivalOf(row.original)) }}
           </td>
-          <td class="px-5 py-4 whitespace-nowrap" :class="isOverdue(row.original) ? 'font-medium text-rose-700' : 'text-slate-600'">{{ formatDateTime(row.original.expectedLogOffAt) }}</td>
+          <td class="px-5 py-4 whitespace-nowrap" :class="isPastExpectedLogOff(row.original) ? 'font-medium text-rose-700' : 'text-slate-600'">{{ formatDateTime(row.original.expectedLogOffAt) }}</td>
           <td class="px-5 py-4 text-slate-600">{{ row.original.source ?? '—' }}</td>
           <td class="px-5 py-4 text-right">
             <DropdownMenuRoot>

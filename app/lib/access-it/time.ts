@@ -1,4 +1,5 @@
-// Small date helpers shared by the Access IT stores and screens.
+// Small date helpers shared by the Access IT stores and screens. Calendar days ('YYYY-MM-DD') are
+// always taken in local time so expiry and permit windows line up with the working-window clock.
 
 export function minutesFromClock(clock: string) {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number)
@@ -21,8 +22,13 @@ export function withinWindow(minutes: number, start: number, finish: number) {
   return minutes >= start || minutes < finish
 }
 
+function pad(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+/** Local calendar day as 'YYYY-MM-DD'. */
 export function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 export function daysFromNow(days: number) {
@@ -47,6 +53,13 @@ export function hasExpired(isoDay: string, now = new Date()) {
   return isoDay < isoDate(now)
 }
 
+/** Format a 'YYYY-MM-DD' day for display without a timezone shift. */
+export function formatIsoDay(isoDay: string) {
+  const [year, month, day] = isoDay.split('-').map(Number)
+  if (!year || !month || !day) return '—'
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export function formatDate(iso: string | null | undefined) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -65,7 +78,6 @@ export function formatDateTime(iso: string | null | undefined) {
 /** Local value for an <input type="datetime-local">. */
 export function toDateTimeLocal(iso: string) {
   const date = new Date(iso)
-  const pad = (value: number) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 

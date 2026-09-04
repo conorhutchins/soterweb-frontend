@@ -105,8 +105,8 @@ function submit() {
     <AccessItENoteCard code="1" />
 
     <div v-if="config.anonymousAccessAllowed.value" class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="How you are logging on">
-      <button type="button" role="radio" :aria-checked="mode === 'account'" class="h-10 rounded-lg text-sm font-medium transition" :class="mode === 'account' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'account'">I have an account</button>
-      <button type="button" role="radio" :aria-checked="mode === 'anonymous'" class="h-10 rounded-lg text-sm font-medium transition" :class="mode === 'anonymous' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'anonymous'">I don't have an account</button>
+      <button type="button" role="radio" :aria-checked="mode === 'account'" class="min-h-11 rounded-lg px-2 py-2 text-sm font-medium leading-tight transition" :class="mode === 'account' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'account'">I have an account</button>
+      <button type="button" role="radio" :aria-checked="mode === 'anonymous'" class="min-h-11 rounded-lg px-2 py-2 text-sm font-medium leading-tight transition" :class="mode === 'anonymous' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:text-ink'" @click="mode = 'anonymous'">I don't have an account</button>
     </div>
 
     <div v-if="mode === 'account'" class="grid gap-4 sm:grid-cols-2">
@@ -116,7 +116,7 @@ function submit() {
       </label>
       <label class="block space-y-2">
         <span class="text-sm font-medium text-slate-700">Password</span>
-        <span class="relative block"><LockKeyhole class="pointer-events-none absolute left-3.5 top-3.5 size-5 text-slate-400" /><input v-model="credentials.password" type="password" autocomplete="current-password" placeholder="Your password" :class="iconInputClass" /></span>
+        <span class="relative block"><LockKeyhole class="pointer-events-none absolute left-3.5 top-3.5 size-5 text-slate-400" /><input v-model="credentials.password" type="password" autocomplete="off" placeholder="Your password" :class="iconInputClass" /></span>
       </label>
     </div>
 
@@ -151,8 +151,8 @@ function submit() {
     </div>
 
     <fieldset class="space-y-3">
-      <legend class="mb-3 text-sm font-medium text-slate-700">Reason for attendance</legend>
-      <div class="space-y-2" role="radiogroup">
+      <legend id="reason-for-attendance" class="mb-3 text-sm font-medium text-slate-700">Reason for attendance</legend>
+      <div class="space-y-2" role="radiogroup" aria-labelledby="reason-for-attendance">
         <AccessItKioskChoice v-for="option in config.visibleLogOnReasons.value" :key="option.code" :label="option.label" :selected="reason === option.code" @select="reason = option.code" />
       </div>
     </fieldset>

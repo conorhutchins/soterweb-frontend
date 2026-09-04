@@ -1,6 +1,13 @@
 import { LOG_OFF_OPTIONS, LOG_ON_REASONS, defaultEmailAutomations, defaultENotes, defaultParameters } from '~/lib/access-it/config-defaults'
 import type { EmailAutomation, ENote, SystemParameter } from '~/types/access-it'
 
+function mergeMissing<T>(current: T[], defaults: T[], keyOf: (item: T) => string) {
+  const present = new Set(current.map(keyOf))
+  for (const item of defaults) {
+    if (!present.has(keyOf(item))) current.push(structuredClone(item))
+  }
+}
+
 /**
  * The module's configuration: system parameters, eNotes and email automations. Every kiosk
  * screen reads its wording and behaviour from here rather than from code.
@@ -9,6 +16,11 @@ export function useAccessItConfig() {
   const { state: parameters, reset: resetParameters } = usePersistedState<SystemParameter[]>('access-it-parameters', () => structuredClone(defaultParameters))
   const { state: eNotes, reset: resetENotes } = usePersistedState<ENote[]>('access-it-enotes', () => structuredClone(defaultENotes))
   const { state: emailAutomations, reset: resetAutomations } = usePersistedState<EmailAutomation[]>('access-it-email-automations', () => structuredClone(defaultEmailAutomations))
+
+  // Persisted configuration from an earlier version may lack entries added since; fill them in by key.
+  mergeMissing(parameters.value, defaultParameters, (parameter) => parameter.key)
+  mergeMissing(eNotes.value, defaultENotes, (note) => note.code)
+  mergeMissing(emailAutomations.value, defaultEmailAutomations, (automation) => automation.runOrder)
 
   function param(key: string) {
     return parameters.value.find((parameter) => parameter.key === key)?.value ?? ''

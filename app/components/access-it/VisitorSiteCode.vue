@@ -10,14 +10,17 @@ defineProps<{
 }>()
 
 defineEmits<{ refresh: [] }>()
+
+const inputId = useId()
 </script>
 
 <template>
   <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-    <p class="text-sm font-medium text-slate-700">Type the code shown</p>
+    <label :for="inputId" class="text-sm font-medium text-slate-700">Type the code shown</label>
     <div class="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-      <span class="select-none rounded-xl bg-soter-600 px-8 py-3 text-center font-mono text-3xl font-semibold tracking-[0.4em] text-white" aria-label="Site code">{{ code }}</span>
-      <input v-model="entry" required inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter code" class="h-14 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-xl tracking-[0.3em] outline-hidden transition placeholder:tracking-normal placeholder:text-slate-400 focus:border-soter-500 focus:ring-3 focus:ring-soter-100" />
+      <span class="select-none rounded-xl bg-soter-600 px-8 py-3 text-center font-mono text-3xl font-semibold tracking-[0.4em] text-white" aria-hidden="true">{{ code }}</span>
+      <span class="sr-only">The code is {{ code.split('').join(' ') }}</span>
+      <input :id="inputId" v-model="entry" required inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter code" class="h-14 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-xl tracking-[0.3em] outline-hidden transition placeholder:tracking-normal placeholder:text-slate-400 focus:border-soter-500 focus:ring-3 focus:ring-soter-100" />
     </div>
     <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
       <button type="button" class="inline-flex items-center gap-1.5 text-sm font-medium text-soter-600 hover:text-soter-700" @click="$emit('refresh')"><RefreshCw class="size-3.5" /> Show another code</button>

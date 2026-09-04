@@ -3,7 +3,7 @@ import { X } from '@lucide/vue'
 import { DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import type { VisitorInput } from '~/composables/useSiteAttendance'
 import { fromDateTimeLocal, toDateTimeLocal } from '~/lib/access-it/time'
-import { emptyVisitorForm, visitorFormFromRecord, visitorInputFromForm } from '~/lib/access-it/visitor-form'
+import { emptyVisitorForm, visitorFormFromRecord, visitorInputFromForm, visitorTimingErrors } from '~/lib/access-it/visitor-form'
 import type { AttendanceRecord } from '~/types/access-it'
 
 // Reception adds a visitor on arrival or pre-books one for later, and edits existing visits.
@@ -23,6 +23,7 @@ const form = ref(emptyVisitorForm())
 const buildingId = ref<number | ''>('')
 const arrivalMode = ref<'now' | 'later'>('now')
 const expectedArrivalAt = ref(nextHourLocal())
+const timingErrors = ref<string[]>([])
 
 const isEditing = computed(() => Boolean(props.visitor))
 const showArrivalField = computed(() => isEditing.value ? props.visitor?.status === 'Expected' : arrivalMode.value === 'later')
@@ -41,12 +42,14 @@ watch(
       buildingId.value = props.visitor.buildingId
       arrivalMode.value = props.visitor.status === 'Expected' ? 'later' : 'now'
       expectedArrivalAt.value = props.visitor.expectedArrivalAt ? toDateTimeLocal(props.visitor.expectedArrivalAt) : nextHourLocal()
+      timingErrors.value = []
       return
     }
     form.value = emptyVisitorForm()
     buildingId.value = ''
     arrivalMode.value = 'now'
     expectedArrivalAt.value = nextHourLocal()
+    timingErrors.value = []
   },
   { immediate: true },
 )
@@ -67,6 +70,8 @@ function updateOpen(value: boolean) {
 function saveVisitor() {
   if (buildingId.value === '') return
   const arrived = isEditing.value ? props.visitor?.status !== 'Expected' : arrivalMode.value === 'now'
+  timingErrors.value = visitorTimingErrors(form.value, showArrivalField.value ? { expectedArrivalAt: expectedArrivalAt.value } : {})
+  if (timingErrors.value.length) return
   const arrivalIso = showArrivalField.value ? fromDateTimeLocal(expectedArrivalAt.value) : undefined
   emit('save', { input: visitorInputFromForm(form.value, buildingId.value, staffContacts.value, arrivalIso), arrived })
   updateOpen(false)
@@ -113,6 +118,10 @@ const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3
           <p v-if="!isEditing" class="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
             {{ arrivalMode === 'now' ? 'The visitor is emailed a digital pass (automation 00003990) and their host is notified they have arrived.' : 'The visitor is emailed an arrival link (automation 00004000). Using it on arrival records their presence and notifies their host.' }}
           </p>
+
+          <ul v-if="timingErrors.length" role="alert" class="space-y-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <li v-for="error in timingErrors" :key="error">{{ error }}</li>
+          </ul>
 
           <div class="flex justify-end gap-3">
             <DialogClose class="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Cancel</DialogClose>

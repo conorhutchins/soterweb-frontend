@@ -15,9 +15,18 @@ function iconClass(check: ComplianceCheckResult) {
   return check.passed ? 'text-emerald-500' : 'text-rose-500'
 }
 
+function notApplicable(check: ComplianceCheckResult) {
+  return check.detail.startsWith('Not applicable')
+}
+
 function statusLabel(check: ComplianceCheckResult) {
-  if (!check.enabled) return 'Not checked'
+  if (!check.enabled) return notApplicable(check) ? 'Not applicable' : 'Not checked'
   return check.passed ? 'Pass' : 'Fail'
+}
+
+function detail(check: ComplianceCheckResult) {
+  if (check.enabled || notApplicable(check)) return check.detail
+  return 'Switched off by system parameter'
 }
 
 function statusTone(check: ComplianceCheckResult): 'success' | 'danger' | 'neutral' {
@@ -35,7 +44,7 @@ function statusTone(check: ComplianceCheckResult): 'success' | 'danger' | 'neutr
           <p class="text-sm font-medium text-ink">{{ check.label }} <span class="text-xs font-normal text-slate-400">· {{ check.level }}</span></p>
           <AccessItStatusPill :label="statusLabel(check)" :tone="statusTone(check)" />
         </div>
-        <p class="mt-0.5 text-xs text-slate-500">{{ check.enabled ? check.detail : 'Switched off by system parameter' }}</p>
+        <p class="mt-0.5 text-xs text-slate-500">{{ detail(check) }}</p>
       </div>
     </li>
   </ul>

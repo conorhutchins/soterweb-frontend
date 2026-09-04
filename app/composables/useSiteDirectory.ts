@@ -76,8 +76,9 @@ export function useSiteDirectory() {
   const organisations = useState<ContractorOrganisation[]>('access-it-contractor-organisations', () => structuredClone(organisationsFixture))
   const contractors = useState<Contractor[]>('access-it-contractors', () => structuredClone(contractorsFixture))
   const staffContacts = useState<StaffContact[]>('access-it-staff-contacts', () => structuredClone(staffContactsFixture))
-  const { state: permits, reset: resetPermits } = usePersistedState<Permit[]>('access-it-permits', () => structuredClone(permitsFixture))
-  const { state: assets, reset: resetAssets } = usePersistedState<Asset[]>('access-it-assets', () => structuredClone(assetsFixture))
+  // Permits and assets carry dates relative to today, so they are rebuilt on every load rather than persisted.
+  const permits = useState<Permit[]>('access-it-permits', () => structuredClone(permitsFixture))
+  const assets = useState<Asset[]>('access-it-assets', () => structuredClone(assetsFixture))
 
   const activeBuildings = computed(() => buildings.value.filter((building) => building.active))
 
@@ -180,8 +181,8 @@ export function useSiteDirectory() {
   }
 
   function resetAll() {
-    resetPermits()
-    resetAssets()
+    permits.value = structuredClone(permitsFixture)
+    assets.value = structuredClone(assetsFixture)
     organisations.value = structuredClone(organisationsFixture)
   }
 

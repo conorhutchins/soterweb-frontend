@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ArrowRight, Clock, ExternalLink, LogIn, LogOut, Mail, Send, Settings2, UserRoundCheck, Users, UsersRound } from '@lucide/vue'
+import { ArrowRight, Clock, ExternalLink, KeyRound, LogIn, LogOut, Mail, Send, Settings2, UserRoundCheck, Users, UsersRound } from '@lucide/vue'
 import { clockIsSet, formatDateTime } from '~/lib/access-it/time'
 
 const { contractorsOnSite, visitorsOnSite, onSiteOver24Hours, onSiteOverExpectedTime, sentEmails } = useSiteAttendance()
 const { param } = useAccessItConfig()
+const { contractors, organisations, organisationById } = useSiteDirectory()
 
 const isSendListOpen = ref(false)
 
@@ -24,6 +25,30 @@ const applications = [
   { title: 'Visitors log on / log off', description: 'The self-service visitor route, as shown on a kiosk or tablet.', to: '/site-access/visitors', icon: UsersRound },
   { title: 'Module settings', description: 'System parameters, eNotes and email automations that shape the module.', to: '/access-it/settings', icon: Settings2 },
 ]
+
+// What each demo account shows off. The public kiosk deliberately does not list these; they live behind sign-in.
+const demoHints: Record<string, string> = {
+  contractor1: 'Passes every check; PPM contractor for the Energy Centre assets',
+  contractor2: 'Asbestos acknowledgement and permit conflicts; already on site',
+  contractor3: 'Refused: insurance expired',
+  contractor4: 'Refused: induction expired',
+  contractor5: 'Out-of-hours approved organisation',
+  contractor6: 'Refused: certificate expired',
+  contractor7: 'Holds an out-of-hours permit at the Library',
+  contractor8: 'Refused: RAMS expired',
+  contractor9: 'On site over 24 hours',
+}
+
+const demoAccounts = computed(() => contractors.value.map((contractor) => ({
+  username: contractor.username,
+  password: contractor.password,
+  name: `${contractor.firstName} ${contractor.lastName}`,
+  organisation: organisationById(contractor.organisationId)?.name ?? '',
+  hint: demoHints[contractor.username] ?? '',
+})))
+
+const companyCodes = computed(() => organisations.value.map((organisation) => `${organisation.code} (${organisation.name})`).join(', '))
+const verificationCode = computed(() => param('Site Access Allow Anonymous Verification Code'))
 
 const recentEmails = computed(() => [...sentEmails.value].sort((left, right) => right.sentAt.localeCompare(left.sentAt)).slice(0, 6))
 
@@ -112,6 +137,35 @@ const workingWindow = computed(() => {
           <NuxtLink to="/access-it/settings" class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-soter-600 no-underline hover:underline">Change in settings <ArrowRight class="size-3.5" /></NuxtLink>
         </section>
       </div>
+
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header class="border-b border-slate-100 px-5 py-4">
+          <h2 class="flex items-center gap-2 text-base font-semibold text-ink"><KeyRound class="size-4 text-slate-400" /> Demo accounts for the kiosk</h2>
+          <p class="mt-1 text-xs leading-5 text-slate-500">Every contractor account uses the password <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700">demo</code>. Staff sign in as <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700">Test</code> / <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700">Leeds</code>. The public kiosk deliberately does not show any of this.</p>
+        </header>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[640px] border-collapse text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
+              <tr>
+                <th scope="col" class="px-5 py-3 font-semibold">Username</th>
+                <th scope="col" class="px-5 py-3 font-semibold">Operative</th>
+                <th scope="col" class="px-5 py-3 font-semibold">Demonstrates</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="account in demoAccounts" :key="account.username">
+                <td class="whitespace-nowrap px-5 py-2.5 font-mono text-xs font-medium text-soter-700">{{ account.username }}</td>
+                <td class="px-5 py-2.5"><span class="font-medium text-ink">{{ account.name }}</span><span class="block text-xs text-slate-500">{{ account.organisation }}</span></td>
+                <td class="px-5 py-2.5 text-slate-600">{{ account.hint }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <dl class="grid gap-3 border-t border-slate-100 px-5 py-4 text-sm sm:grid-cols-2">
+          <div><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Anonymous verification code</dt><dd class="mt-1 font-mono text-xs font-medium text-soter-700">{{ verificationCode || 'Not set' }}</dd></div>
+          <div><dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Company codes</dt><dd class="mt-1 text-slate-600">{{ companyCodes }}</dd></div>
+        </dl>
+      </section>
     </div>
 
     <AccessItSendListDialog v-model:open="isSendListOpen" />

@@ -55,7 +55,7 @@ Demo contractor accounts all use the password `demo`:
 | `contractor7` | Holds an out-of-hours permit at the Library |
 | `contractor8` | Denied: organisation RAMS expired |
 
-Anonymous log on uses company codes such as `AQUA` or `ASM` and the verification code held in the system parameters (default `34ABCD`).
+Anonymous log on uses company codes such as `AQUA` or `ASM` and the verification code held in the system parameters (default `34ABCD`). The module home at `/access-it` lists these demo details for whoever is running a demonstration; the public kiosk does not show them.
 
 ### Staff screens (`/access-it`)
 
@@ -70,4 +70,5 @@ Signed-in staff manage the module from inside the application.
 
 - `app/types/access-it.ts` mirrors the legacy data shapes so the mock stores can be swapped for the API.
 - `app/lib/access-it/compliance.ts` holds the pure decision rules (compliance checks, working window, acknowledgements, conflicts).
-- `app/composables/useAccessItConfig.ts`, `useSiteDirectory.ts` and `useSiteAttendance.ts` are the mock stores. They persist to localStorage so a kiosk tab and a staff tab stay in step; Module settings has a reset.
+- `app/composables/useAccessItConfig.ts`, `useSiteDirectory.ts` and `useSiteAttendance.ts` are the mock stores. Configuration and attendance persist to localStorage so a kiosk tab and a staff tab stay in step; Module settings has a reset. Permits and assets are rebuilt from fixtures on every load so their dates stay relative to today.
+- Emails are written to an on-screen outbox rather than sent. The four timed reminders (still on site after core hours, expected log off warnings) need a scheduler, so they never fire in the demo.
