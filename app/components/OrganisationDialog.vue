@@ -51,7 +51,7 @@ function saveOrganisation() {
   <DialogRoot :open="open" @update:open="updateOpen">
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-[2px]" />
-      <DialogContent class="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl outline-hidden sm:p-7">
+      <DialogContent class="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl outline-hidden sm:p-7">
         <div class="flex items-start justify-between gap-4">
           <div>
             <DialogTitle class="text-xl font-semibold tracking-tight text-ink">{{ isEditing ? 'Edit organisation' : 'Add organisation' }}</DialogTitle>
