@@ -55,7 +55,7 @@ function setActive(automation: EmailAutomation, active: boolean) {
         <tbody class="divide-y divide-slate-100 text-sm">
           <tr v-for="automation in emailAutomations" :key="automation.runOrder" class="group align-top transition hover:bg-soter-50/60">
             <td class="whitespace-nowrap px-5 py-4 font-mono text-xs font-medium text-soter-700">{{ automation.runOrder }}</td>
-            <td class="px-5 py-4">
+            <td class="min-w-72 px-5 py-4">
               <p class="font-medium text-ink">{{ automation.description }}</p>
               <p class="mt-0.5 text-xs text-slate-500">Subject: {{ automation.subject }}</p>
             </td>
