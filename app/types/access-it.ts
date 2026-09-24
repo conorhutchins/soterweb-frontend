@@ -149,6 +149,10 @@ export type WorkingWindowBasis = 'Checks disabled' | 'Core hours' | 'Flex period
 
 /** One attendance: a contractor or visitor, expected, on site or departed. */
 export interface AttendanceRecord {
+  /** Present only on untouched built-in demo samples. Never supplied by an API. */
+  demoSampleDay?: string
+  travelStartedAt?: string
+  travelFinishedAt?: string
   id: number
   type: AttendanceType
   status: AttendanceStatus
@@ -232,6 +236,7 @@ export interface EmailAutomation {
 }
 
 export interface SentEmail {
+  demoSampleDay?: string
   id: number
   runOrder: string
   to: string

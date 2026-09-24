@@ -37,16 +37,16 @@ export function daysFromNow(days: number) {
   return isoDate(date)
 }
 
-export function todayAt(clock: string, dayOffset = 0) {
-  const date = new Date()
+export function todayAt(clock: string, dayOffset = 0, now = new Date()) {
+  const date = new Date(now)
   date.setDate(date.getDate() + dayOffset)
   const [hours = 0, minutes = 0] = clock.split(':').map(Number)
   date.setHours(hours, minutes, 0, 0)
   return date.toISOString()
 }
 
-export function hoursFromNow(hours: number) {
-  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+export function hoursFromNow(hours: number, now = new Date()) {
+  return new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString()
 }
 
 export function hasExpired(isoDay: string, now = new Date()) {

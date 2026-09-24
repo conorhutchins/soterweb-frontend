@@ -2,34 +2,13 @@ import { useNow } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { LOG_OFF_OPTIONS } from '~/lib/access-it/config-defaults'
 import { renderTemplate } from '~/lib/access-it/templates'
-import { formatDateTime, hoursFromNow, todayAt } from '~/lib/access-it/time'
+import { attendanceFixture, sentEmailFixture } from '~/lib/access-it/demo-fixtures'
+import { preserveDemoInteraction, refreshSampleDates } from '~/lib/access-it/demo-samples'
+import { formatDateTime, isoDate } from '~/lib/access-it/time'
 import type { AssetActivity, AttendanceRecord, LogOffOption, LogOnReason, SentEmail, VisitorSource, WorkingWindowBasis } from '~/types/access-it'
 
 function token() {
   return Math.random().toString(36).slice(2, 10)
-}
-
-function attendanceFixture(): AttendanceRecord[] {
-  return [
-    { id: 1, type: 'Contractor', status: 'On site', name: 'Marcus Webb', company: 'Advanced Super Monitoring', mobile: '07841 995 234', email: 'marcus.webb@asmonitoring.co.uk', buildingId: 1, buildingName: 'Ashworth Building', locationOrHost: 'Fire alarm panel, main lobby', description: 'Fire alarm panel monitoring', loggedOnAt: todayAt('07:10', -2), expectedLogOffAt: todayAt('17:00', -2), loggedOffAt: null, passToken: token(), contractorId: 9, organisationId: 2, reason: 'A', workingWindowBasis: 'Core hours' },
-    { id: 2, type: 'Contractor', status: 'On site', name: 'Justin Thorpe', company: 'Advanced Super Monitoring', mobile: '07700 900123', email: 'justin.thorpe@asmonitoring.co.uk', buildingId: 2, buildingName: 'Priory House', locationOrHost: 'Lift 22', description: 'Lift 22 control panel replacement (PTW-2026-0142)', loggedOnAt: hoursFromNow(-2.5), expectedLogOffAt: hoursFromNow(5), loggedOffAt: null, passToken: token(), contractorId: 2, organisationId: 2, reason: 'C', workingWindowBasis: 'Core hours' },
-    { id: 3, type: 'Contractor', status: 'On site', name: 'Amira Khan', company: 'NightClean Services', mobile: '07746 385 627', email: 'amira.khan@nightclean.co.uk', buildingId: 5, buildingName: 'Sports Centre', locationOrHost: 'Changing rooms', description: 'Deep clean of changing rooms', loggedOnAt: hoursFromNow(-1.2), expectedLogOffAt: hoursFromNow(3), loggedOffAt: null, passToken: token(), contractorId: 5, organisationId: 4, reason: 'A', workingWindowBasis: 'Approved organisation' },
-    { id: 4, type: 'Visitor', status: 'On site', name: 'Jamie Brown', company: 'Harrison Architects', mobile: '07712 303 944', email: 'jamie.brown@harrisonarchitects.co.uk', buildingId: 2, buildingName: 'Priory House', locationOrHost: 'Thomas Fenwick', description: 'Design review', loggedOnAt: hoursFromNow(-0.75), expectedLogOffAt: hoursFromNow(2), loggedOffAt: null, passToken: token(), source: 'Reception', hostContactId: 1, hostEmail: 'thomas.fenwick@campusworkspace.co.uk', vehicleReg: 'AP74 VVF' },
-    { id: 5, type: 'Visitor', status: 'On site', name: 'Lisa Anderson', company: 'Vertex Management Consulting', mobile: '07765 234 891', email: 'lisa.anderson@vertexmc.co.uk', buildingId: 3, buildingName: 'Library', locationOrHost: 'Sarah Ogundipe', description: 'Compliance review', loggedOnAt: hoursFromNow(-2), expectedLogOffAt: hoursFromNow(-0.5), loggedOffAt: null, passToken: token(), source: 'Self service', hostContactId: 3, hostEmail: 'sarah.ogundipe@campusworkspace.co.uk' },
-    { id: 6, type: 'Visitor', status: 'Expected', name: 'David Lee', company: 'Catalyst Ventures Ltd', mobile: '07634 128 756', email: 'david.lee@catalystventures.co.uk', buildingId: 1, buildingName: 'Ashworth Building', locationOrHost: 'Nadia Rossi', description: 'Partnership discussion', expectedArrivalAt: hoursFromNow(1.5), loggedOnAt: null, expectedLogOffAt: hoursFromNow(4), loggedOffAt: null, passToken: token(), source: 'Pre-booked', hostContactId: 6, hostEmail: 'nadia.rossi@campusworkspace.co.uk' },
-    { id: 7, type: 'Visitor', status: 'Expected', name: 'Catherine Taylor', company: 'Zenith Executive Search', mobile: '07841 995 111', email: 'catherine.taylor@zenithsearch.co.uk', buildingId: 3, buildingName: 'Library', locationOrHost: 'Gareth Bell', description: 'Recruitment discussion', expectedArrivalAt: todayAt('09:30', 1), loggedOnAt: null, expectedLogOffAt: todayAt('11:00', 1), loggedOffAt: null, passToken: token(), source: 'Pre-booked', hostContactId: 5, hostEmail: 'gareth.bell@campusworkspace.co.uk' },
-    { id: 8, type: 'Visitor', status: 'Departed', name: 'John Smith', company: 'Davison & Partners', mobile: '07956 143 287', email: 'john.smith@davisonpartners.co.uk', buildingId: 1, buildingName: 'Ashworth Building', locationOrHost: 'Paul Lendwick', description: 'Design studio review', loggedOnAt: todayAt('10:27', -1), expectedLogOffAt: todayAt('12:30', -1), loggedOffAt: todayAt('12:05', -1), passToken: token(), source: 'Reception', hostContactId: 2, hostEmail: 'paul.lendwick@campusworkspace.co.uk' },
-    { id: 9, type: 'Contractor', status: 'Departed', name: 'Stuart Grey', company: 'Aqua Force Plumbing Services', mobile: '07744 695 8499', email: 'stuart.grey@aquaforce.co.uk', buildingId: 4, buildingName: 'Energy Centre', locationOrHost: 'Plant room', description: 'Boiler PPM visit', loggedOnAt: todayAt('08:02', -1), expectedLogOffAt: todayAt('12:00', -1), loggedOffAt: todayAt('11:40', -1), passToken: token(), contractorId: 1, organisationId: 1, reason: 'A', workingWindowBasis: 'Core hours', logOffOption: 'A', assetActivities: [{ type: 'PPM visit', assetTag: 'ENC-BOIL-000001', parentTag: 'P-ENC-BOIL', description: 'Gas boiler 1', location: 'Plant room, ground floor', manufacturer: 'Remeha', model: 'Quinta Pro 115', serialNumber: 'RQ115-44821', serviceConditionRating: '1 - Good', conditionStatus: 'Acceptable', notes: 'Annual service completed. Flue gas analysis within limits.', certificateFileName: 'boiler-1-service-certificate.pdf' }] },
-    { id: 10, type: 'Visitor', status: 'Departed', name: 'Michael Brown', company: 'Meridian Consulting Group', mobile: '07746 385 000', email: 'michael.brown@meridiancg.co.uk', buildingId: 6, buildingName: 'Halifax Halls of Residence', locationOrHost: 'Thomas Fenwick', description: 'Facilities assessment', loggedOnAt: todayAt('10:53', -3), expectedLogOffAt: todayAt('13:00', -3), loggedOffAt: todayAt('12:48', -3), passToken: token(), source: 'Self service', hostContactId: 1, hostEmail: 'thomas.fenwick@campusworkspace.co.uk' },
-  ]
-}
-
-function sentEmailFixture(): SentEmail[] {
-  return [
-    { id: 1, runOrder: '00004005', to: 'thomas.fenwick@campusworkspace.co.uk', subject: 'Your visitor Jamie Brown has arrived', body: 'Hello Thomas Fenwick,\n\nJamie Brown from Harrison Architects has arrived at Priory House to see you. Reason for visit: Design review.', attachment: '', sentAt: hoursFromNow(-0.75) },
-    { id: 2, runOrder: '00003990', to: 'jamie.brown@harrisonarchitects.co.uk', subject: 'Your visitor pass for Priory House', body: 'Hello Jamie Brown,\n\nYour visit to Priory House to see Thomas Fenwick has been recorded.', attachment: 'Visitor site rules.pdf', sentAt: hoursFromNow(-0.75) },
-    { id: 3, runOrder: '00004010', to: 'thomas.fenwick@campusworkspace.co.uk', subject: 'Justin Thorpe has logged on at Priory House', body: 'Hello Thomas Fenwick,\n\nJustin Thorpe (Advanced Super Monitoring) logged on at Priory House for: Lift 22 control panel replacement (PTW-2026-0142).', attachment: '', sentAt: hoursFromNow(-2.5) },
-  ]
 }
 
 export interface ContractorLogOnInput {
@@ -87,6 +66,9 @@ export function useSiteAttendance() {
   const config = useAccessItConfig()
   const directory = useSiteDirectory()
   const now = sharedClock()
+  const sampleDay = isoDate(now.value)
+  records.value = refreshSampleDates(records.value, attendanceFixture(now.value), sampleDay, ['loggedOnAt', 'expectedLogOffAt', 'expectedArrivalAt', 'loggedOffAt', 'travelStartedAt', 'travelFinishedAt'])
+  sentEmails.value = refreshSampleDates(sentEmails.value, sentEmailFixture(now.value), sampleDay, ['sentAt'])
 
   const onSite = computed(() => records.value.filter((record) => record.status === 'On site'))
   const contractorsOnSite = computed(() => onSite.value.filter((record) => record.type === 'Contractor'))
@@ -212,6 +194,7 @@ export function useSiteAttendance() {
     const record = recordById(recordId)
     if (!record) return null
 
+    preserveDemoInteraction(record)
     const chosen = LOG_OFF_OPTIONS.find((candidate) => candidate.code === option)
     record.logOffOption = option
     if (assetActivities.length) record.assetActivities = [...(record.assetActivities ?? []), ...assetActivities]
@@ -283,6 +266,7 @@ export function useSiteAttendance() {
     const record = recordById(recordId)
     if (!record) return
     const building = directory.buildingById(input.buildingId)
+    preserveDemoInteraction(record)
     Object.assign(record, {
       name: input.name,
       company: input.company,
@@ -307,6 +291,7 @@ export function useSiteAttendance() {
   function markArrived(recordId: number) {
     const record = recordById(recordId)
     if (!record || record.status === 'On site') return record ?? null
+    preserveDemoInteraction(record)
     record.status = 'On site'
     record.loggedOnAt = new Date().toISOString()
     record.loggedOffAt = null
@@ -318,6 +303,7 @@ export function useSiteAttendance() {
   function markDeparted(recordId: number) {
     const record = recordById(recordId)
     if (!record) return null
+    preserveDemoInteraction(record)
     record.status = 'Departed'
     record.loggedOffAt = new Date().toISOString()
     return record
