@@ -20,11 +20,13 @@ The demo uses client-side mock authentication only. These credentials are public
 ```bash
 npm run lint
 npm run typecheck
+npm test
+npm run generate
 ```
 
 ## Included demo flow
 
-- Login with persistent mock authentication
+- Login with an expiring mock session and recovery/activation previews
 - Organisations table with global search, sortable columns, active-only filtering, pagination, and labelled row actions
 - Add and edit organisation dialog backed by a mock store
 - Stubbed XLSX export, PDF export, and refresh feedback ready to connect to the future API
@@ -61,14 +63,14 @@ Anonymous log on uses company codes such as `AQUA` or `ASM` and the verification
 
 Signed-in staff manage the module from inside the application.
 
-- `/access-it` module home with RAG dashboard tiles
+- `/access-it` module overview with attendance counts, drill-downs and a collapsed demo guide
 - `/access-it/people-on-site` everyone currently on site, with history and the Send List emergency function
 - `/access-it/visitors` reception screen to pre-book, register, edit, log off and print passes for visitors
 - `/access-it/settings` the 32 system parameters, 26 eNotes and 12 email automations that govern the module, plus a log of emails the module would have sent
 
 ### How it fits together
 
-- `app/types/access-it.ts` mirrors the legacy data shapes so the mock stores can be swapped for the API.
+- `app/types/access-it.ts` describes the prototype data model; confirm and map it to the .NET contract before replacing the mock stores.
 - `app/lib/access-it/compliance.ts` holds the pure decision rules (compliance checks, working window, acknowledgements, conflicts).
 - `app/composables/useAccessItConfig.ts`, `useSiteDirectory.ts` and `useSiteAttendance.ts` are the mock stores. Configuration and attendance persist to localStorage so a kiosk tab and a staff tab stay in step; Module settings has a reset. Permits and assets are rebuilt from fixtures on every load so their dates stay relative to today.
 - Emails are written to an on-screen outbox rather than sent. The four timed reminders (still on site after core hours, expected log off warnings) need a scheduler, so they never fire in the demo.
@@ -84,3 +86,9 @@ Password recovery and `/login/reset?preview=reset` or `/login/reset?preview=acti
 Attendance can be filtered by person type, building, company and overdue status. History date ranges include any visit overlapping the selected local calendar days. Dashboard counts open their corresponding filter, and phone layouts use compact records with accessible detail actions.
 
 Untouched built-in attendance and email samples refresh their dates once per local day when the store opens. Creating, editing, arriving or departing a visit preserves its times; pass links remain stable. Saved datasets from before this update are left intact. Reset demo data in Settings explicitly starts a fresh dataset and warns that it replaces existing demo changes.
+
+### Visitor workflow and handover
+
+Reception and kiosk forms share grouped visitor, host and visit details. Optional location, vehicle and hospitality notes persist with the visit; passes show the location but omit hospitality notes. Existing arrived visits can be edited without moving their expected departure into the future.
+
+See [the demonstration and .NET handover](docs/demo-and-integration.md) for a short walkthrough, integration boundaries and the decisions to agree with the existing developer.
