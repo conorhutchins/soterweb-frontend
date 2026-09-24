@@ -47,6 +47,7 @@ const workingWindow = computed(() => {
     <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-soter-700">Demo guide and working hours</summary>
     <div class="space-y-5 border-t border-slate-100 p-4 sm:p-5">
       <p class="text-sm leading-6 text-slate-600">Try a contractor arrival, check People on site, then record their departure. Notifications appear in the demo outbox; no emails are sent.</p>
+      <p class="text-sm leading-6 text-slate-600">Untouched sample activity refreshes when you open the demo on a new day. Visits you create or edit keep their original times. Older saved demos are preserved; use Reset demo data in Settings when you want a fresh demonstration.</p>
       <dl class="grid gap-3 text-sm sm:grid-cols-3">
         <div><dt class="text-slate-500">Core hours</dt><dd class="font-medium">{{ workingWindow.core }}</dd></div>
         <div><dt class="text-slate-500">Flex period</dt><dd class="font-medium">{{ workingWindow.flex }}</dd></div>

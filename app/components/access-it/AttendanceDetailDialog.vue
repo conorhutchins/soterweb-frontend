@@ -43,6 +43,9 @@ const details = computed(() => {
     { label: 'Time on site', value: duration.value },
   ]
 
+  if (record.travelStartedAt) rows.push({ label: 'Travel started', value: formatDateTime(record.travelStartedAt) })
+  if (record.travelFinishedAt) rows.push({ label: 'Travel finished', value: formatDateTime(record.travelFinishedAt) })
+
   if (record.type === 'Contractor') {
     rows.push(
       { label: 'Reason for attendance', value: reasonLabel.value },

@@ -78,3 +78,9 @@ Signed-in staff manage the module from inside the application.
 Sign-in uses the public mock account above. Without Remember me, access lasts for the tab session (up to one day); Remember me keeps a mock session for up to 30 days. Sign-out clears both. No password is stored. Existing indefinite demo sessions require a fresh sign-in.
 
 Password recovery and `/login/reset?preview=reset` or `/login/reset?preview=activate` are visual previews only: no email is sent and no credentials are changed. A reset URL without a recognised preview parameter shows an invalid-link state. The .NET service will supply real tokens, password policy, session expiry and recovery delivery.
+
+### Attendance and sample dates
+
+Attendance can be filtered by person type, building, company and overdue status. History date ranges include any visit overlapping the selected local calendar days. Dashboard counts open their corresponding filter, and phone layouts use compact records with accessible detail actions.
+
+Untouched built-in attendance and email samples refresh their dates once per local day when the store opens. Creating, editing, arriving or departing a visit preserves its times; pass links remain stable. Saved datasets from before this update are left intact. Reset demo data in Settings explicitly starts a fresh dataset and warns that it replaces existing demo changes.
