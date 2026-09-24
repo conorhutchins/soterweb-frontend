@@ -9,6 +9,7 @@ import type { AttendanceRecord } from '~/types/access-it'
 
 const props = defineProps<{
   records: AttendanceRecord[]
+  filterRecords: AttendanceRecord[]
   /** Previous attendance shows the logged off column instead of duration-to-now. */
   history: boolean
 }>()
@@ -77,7 +78,7 @@ function duration(record: AttendanceRecord) {
 
 <template>
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <AccessItAttendanceFilters v-model="filters" :records="records" :history="history" />
+    <AccessItAttendanceFilters v-model="filters" :records="filterRecords" :history="history" />
     <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
       <p role="status" class="text-sm text-slate-600"><strong>{{ totalResults }}</strong> {{ totalResults === 1 ? 'record' : 'records' }} {{ history ? 'in attendance history' : 'on site' }}</p>
       <label class="flex items-center gap-2 text-sm text-slate-600 lg:hidden">Sort by<select :value="sorting[0]?.id ?? 'name'" class="h-9 rounded border border-slate-200 bg-white px-2" @change="table.setSorting([{ id: ($event.target as HTMLSelectElement).value, desc: false }])"><option value="name">Name</option><option value="buildingName">Building</option><option value="loggedOnAt">Arrival</option></select></label>

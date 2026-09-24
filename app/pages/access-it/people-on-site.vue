@@ -61,7 +61,7 @@ function showFutureIntegration(action: string) {
         </div>
       </div>
 
-      <AccessItAttendanceTable v-model:filters="filters" :records="visibleRecords" :history="showHistory" @view="viewRecord" @log-off="logOff" />
+      <AccessItAttendanceTable v-model:filters="filters" :records="visibleRecords" :filter-records="records" :history="showHistory" @view="viewRecord" @log-off="logOff" />
     </div>
 
     <AccessItAttendanceDetailDialog v-model:open="isDetailOpen" :record="selectedRecord" />
