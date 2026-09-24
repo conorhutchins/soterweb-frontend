@@ -22,10 +22,10 @@ const workingWindow = computed(() => {
 })
 
 const actions = computed(() => [
-  { title: 'Log on to site', description: 'Contractors: tell us why you are attending and where you will be working.', to: '/site-access/login', icon: LogIn, accent: 'bg-emerald-100 text-emerald-700' },
-  { title: 'Log off site', description: 'Leaving? Close your attendance and update the asset register where required.', to: '/site-access/logout', icon: LogOut, accent: 'bg-rose-100 text-rose-700' },
+  { title: 'Log on to site', description: 'Contractor arrival and work details.', to: '/site-access/login', icon: LogIn, accent: 'bg-emerald-100 text-emerald-700' },
+  { title: 'Log off site', description: 'Record your departure.', to: '/site-access/logout', icon: LogOut, accent: 'bg-rose-100 text-rose-700' },
   ...(config.visitorsCanSelfServe.value
-    ? [{ title: 'Visitors', description: 'Record your arrival, notify your host and get a digital pass.', to: '/site-access/visitors', icon: Users, accent: 'bg-soter-100 text-soter-700' }]
+    ? [{ title: 'Visitors', description: 'Visitor arrival or departure.', to: '/site-access/visitors', icon: Users, accent: 'bg-soter-100 text-soter-700' }]
     : []),
 ])
 
@@ -33,21 +33,21 @@ const actions = computed(() => [
 
 <template>
   <AccessItKioskShell wide>
-    <div class="space-y-10">
+    <div class="space-y-6">
       <header class="text-center">
         <p class="text-sm font-semibold uppercase tracking-[0.12em] text-soter-600">{{ siteProfile.clientName }}</p>
-        <h1 class="mt-2 text-4xl font-semibold tracking-tight text-ink">Welcome to {{ siteProfile.siteName }}</h1>
-        <p class="mx-auto mt-3 max-w-xl text-base leading-7 text-slate-500">Everyone attending site must record their arrival and departure so we can account for you in an emergency and confirm your work is authorised.</p>
+        <h1 class="mt-2 text-2xl font-semibold sm:text-4xl tracking-tight text-ink">Welcome to {{ siteProfile.siteName }}</h1>
+        <p class="mx-auto mt-3 max-w-xl text-base leading-7 text-slate-500">Please record your arrival and departure.</p>
       </header>
 
-      <div class="grid gap-4 md:grid-cols-3" :class="{ 'md:grid-cols-2': actions.length === 2 }">
-        <NuxtLink v-for="action in actions" :key="action.to" :to="action.to" class="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 no-underline shadow-xs transition hover:-translate-y-0.5 hover:border-soter-300 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-soter-100">
+      <div class="grid gap-3" :class="actions.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'">
+        <NuxtLink v-for="action in actions" :key="action.to" :to="action.to" class="group flex items-center gap-3 md:flex-col md:items-start md:gap-4 rounded-2xl border border-slate-200 bg-white p-4 md:p-6 no-underline shadow-xs transition hover:-translate-y-0.5 hover:border-soter-300 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-soter-100">
           <span class="flex size-12 items-center justify-center rounded-xl" :class="action.accent"><component :is="action.icon" class="size-6" /></span>
           <span class="flex-1">
-            <span class="block text-xl font-semibold text-ink">{{ action.title }}</span>
+            <span class="block text-base font-semibold md:text-xl text-ink">{{ action.title }}</span>
             <span class="mt-1.5 block text-sm leading-6 text-slate-500">{{ action.description }}</span>
           </span>
-          <span class="flex items-center gap-1.5 text-sm font-semibold text-soter-600">Continue <ArrowRight class="size-4 transition group-hover:translate-x-0.5" /></span>
+          <span class="flex items-center gap-1.5 text-sm font-semibold text-soter-600"><span class="sr-only md:not-sr-only">Continue</span> <ArrowRight class="size-4 transition group-hover:translate-x-0.5" /></span>
         </NuxtLink>
       </div>
 

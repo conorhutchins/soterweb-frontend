@@ -219,7 +219,7 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
         <TriangleAlert class="mt-0.5 size-5 shrink-0" />
         <div>
           <p class="font-semibold">Self-service visitor sign-in is switched off</p>
-          <p class="mt-1 text-sm leading-6">Please report to reception, where a member of staff will record your arrival and issue your pass. The system parameter Site Access Allow Visitors to LogIn controls this route.</p>
+          <p class="mt-1 text-sm leading-6">Please report to reception, where a member of staff will record your arrival and issue your pass.</p>
         </div>
       </div>
       <NuxtLink to="/site-access" :class="secondaryButtonClass"><ArrowLeft class="size-4" /> Back to start</NuxtLink>
@@ -290,14 +290,14 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
       <AccessItENoteCard code="V3" tone="success" body-only />
       <AccessItVisitorPassCard :record="acceptedRecord" />
       <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p class="flex items-center gap-2 text-sm font-semibold text-slate-700"><Mail class="size-4 text-slate-500" /> Emails sent</p>
+        <p class="flex items-center gap-2 text-sm font-semibold text-slate-700"><Mail class="size-4 text-slate-500" /> Demo notifications</p>
         <ul v-if="firedEmails.length" class="mt-3 space-y-2 text-sm text-slate-600">
-          <li v-for="email in firedEmails" :key="email.id" class="flex flex-wrap items-baseline gap-x-2"><span class="font-mono text-xs text-soter-700">{{ email.runOrder }}</span><span class="font-medium text-ink">{{ email.subject }}</span><span class="text-slate-500">to {{ email.to }}</span></li>
+          <li v-for="email in firedEmails" :key="email.id" class="flex flex-wrap items-baseline gap-x-2"><span class="font-medium text-ink">{{ email.subject }}</span><span class="text-slate-500">to {{ email.to }}</span></li>
         </ul>
-        <p v-else class="mt-2 text-sm text-slate-500">No email automations were active for this log on.</p>
+        <p v-else class="mt-2 text-sm text-slate-500">No notifications are enabled for this arrival.</p>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <NuxtLink :to="logOffPath(acceptedRecord)" :class="secondaryButtonClass"><Link2 class="size-4" /> Log off link (from the email)</NuxtLink>
+        <NuxtLink :to="logOffPath(acceptedRecord)" :class="secondaryButtonClass"><Link2 class="size-4" /> Your departure link</NuxtLink>
         <button type="button" :class="primaryButtonClass" @click="finish">Done <ArrowRight class="size-4" /></button>
       </div>
     </div>
