@@ -41,6 +41,8 @@ export interface VisitorInput {
   description: string
   expectedArrivalAt?: string
   expectedLogOffAt: string
+  visitLocation?: string
+  hospitality?: string
   vehicleReg?: string
 }
 
@@ -237,6 +239,8 @@ export function useSiteAttendance() {
       source,
       hostContactId: input.hostContactId,
       hostEmail: input.hostEmail,
+      visitLocation: input.visitLocation,
+      hospitality: input.hospitality,
       vehicleReg: input.vehicleReg,
     }
   }
@@ -280,6 +284,8 @@ export function useSiteAttendance() {
       description: input.description,
       expectedArrivalAt: input.expectedArrivalAt ?? record.expectedArrivalAt,
       expectedLogOffAt: input.expectedLogOffAt,
+      visitLocation: input.visitLocation,
+      hospitality: input.hospitality,
       vehicleReg: input.vehicleReg,
     })
   }

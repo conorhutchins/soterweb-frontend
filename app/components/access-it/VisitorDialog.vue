@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
-import { DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import type { VisitorInput } from '~/composables/useSiteAttendance'
 import { fromDateTimeLocal, toDateTimeLocal } from '~/lib/access-it/time'
 import { emptyVisitorForm, visitorFormFromRecord, visitorInputFromForm, visitorTimingErrors } from '~/lib/access-it/visitor-form'
@@ -55,9 +55,9 @@ watch(
 )
 
 // A pre-booked visit should not be expected to end before it starts.
-watch(expectedArrivalAt, (arrival) => {
-  if (showArrivalField.value && form.value.expectedLogOffAt < arrival) {
-    const logOff = new Date(fromDateTimeLocal(arrival))
+watch([expectedArrivalAt, showArrivalField], ([arrival, visible]) => {
+  if (visible && Number.isFinite(new Date(arrival).getTime()) && form.value.expectedLogOffAt <= arrival) {
+    const logOff = new Date(arrival)
     logOff.setHours(logOff.getHours() + 2)
     form.value.expectedLogOffAt = toDateTimeLocal(logOff.toISOString())
   }
@@ -70,7 +70,7 @@ function updateOpen(value: boolean) {
 function saveVisitor() {
   if (buildingId.value === '') return
   const arrived = isEditing.value ? props.visitor?.status !== 'Expected' : arrivalMode.value === 'now'
-  timingErrors.value = visitorTimingErrors(form.value, showArrivalField.value ? { expectedArrivalAt: expectedArrivalAt.value } : {})
+  timingErrors.value = visitorTimingErrors(form.value, showArrivalField.value ? { expectedArrivalAt: expectedArrivalAt.value } : { loggedOnAt: props.visitor?.loggedOnAt })
   if (timingErrors.value.length) return
   const arrivalIso = showArrivalField.value ? fromDateTimeLocal(expectedArrivalAt.value) : undefined
   emit('save', { input: visitorInputFromForm(form.value, buildingId.value, staffContacts.value, arrivalIso), arrived })
@@ -88,7 +88,7 @@ const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3
         <div class="flex items-start justify-between gap-4">
           <div>
             <DialogTitle class="text-xl font-semibold tracking-tight text-ink">{{ isEditing ? 'Edit visitor' : 'Add visitor' }}</DialogTitle>
-            <p class="mt-1.5 text-sm text-slate-500">{{ isEditing ? 'Update the details of this visit.' : 'Register a visitor on arrival, or pre-book one and email them an arrival link.' }}</p>
+            <DialogDescription class="mt-1.5 text-sm text-slate-500">{{ isEditing ? 'Update the details of this visit.' : 'Register a visitor on arrival, or pre-book an upcoming visit.' }}</DialogDescription>
           </div>
           <DialogClose class="rounded-lg p-2 text-slate-400 outline-hidden hover:bg-slate-100 hover:text-slate-700"><X class="size-4" /><span class="sr-only">Close</span></DialogClose>
         </div>
@@ -99,24 +99,24 @@ const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3
             <button type="button" role="radio" :aria-checked="arrivalMode === 'later'" class="rounded-md px-4 py-1.5 text-sm font-medium transition" :class="arrivalMode === 'later' ? 'bg-white text-soter-700 shadow-xs' : 'text-slate-600 hover:text-slate-800'" @click="arrivalMode = 'later'">Pre-book</button>
           </div>
 
-          <div class="grid gap-5 sm:grid-cols-2">
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-slate-700">Building</span>
-              <select v-model="buildingId" required :class="inputClass">
-                <option value="" disabled>Choose a building</option>
-                <option v-for="building in activeBuildings" :key="building.id" :value="building.id">{{ building.name }}</option>
-              </select>
-            </label>
-            <label v-if="showArrivalField" class="space-y-2">
-              <span class="text-sm font-medium text-slate-700">Expected arrival</span>
-              <input v-model="expectedArrivalAt" required type="datetime-local" :class="inputClass" />
-            </label>
-          </div>
-
-          <AccessItVisitorFields v-model="form" />
+          <AccessItVisitorFields v-model="form">
+            <template #visit>
+              <label class="space-y-2">
+                <span class="text-sm font-medium text-slate-700">Building</span>
+                <select v-model="buildingId" required :class="inputClass">
+                  <option value="" disabled>Choose a building</option>
+                  <option v-for="building in activeBuildings" :key="building.id" :value="building.id">{{ building.name }}</option>
+                </select>
+              </label>
+              <label v-if="showArrivalField" class="space-y-2">
+                <span class="text-sm font-medium text-slate-700">Expected arrival</span>
+                <input v-model="expectedArrivalAt" required type="datetime-local" :class="inputClass" />
+              </label>
+            </template>
+          </AccessItVisitorFields>
 
           <p v-if="!isEditing" class="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
-            {{ arrivalMode === 'now' ? 'The visitor is emailed a digital pass (automation 00003990) and their host is notified they have arrived.' : 'The visitor is emailed an arrival link (automation 00004000). Using it on arrival records their presence and notifies their host.' }}
+            Arrival links, passes and host notifications appear in the demo outbox when enabled. No email is sent.
           </p>
 
           <ul v-if="timingErrors.length" role="alert" class="space-y-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
