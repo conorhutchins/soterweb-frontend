@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.30.0",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^22.20.4",
     "eslint": "^10.8.1",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.3.9"

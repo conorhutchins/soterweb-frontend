@@ -1,8 +1,12 @@
+import process from 'node:process'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
+  typescript: {
+    nodeTsConfig: { compilerOptions: { types: ['node'] } },
+  },
   css: ['~/assets/css/main.css'],
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL || '/',
