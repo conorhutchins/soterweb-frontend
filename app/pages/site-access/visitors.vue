@@ -63,7 +63,7 @@ const shellTitle = computed(() => ({
 const shellSubtitle = computed(() => ({
   hub: 'Record your arrival so your host knows you are here, or log off when you leave.',
   logon: logOnStep.value === 0 ? 'Choose the building you are visiting.' : 'Tell us who you are and who you are visiting.',
-  loggedOn: 'Your host has been notified and your digital pass is on its way.',
+  loggedOn: 'Your arrival is recorded. Your visitor pass is ready below.',
   logoff: 'Enter the details you gave when you arrived.',
   loggedOff: 'Your departure has been recorded.',
   notice: '',
@@ -291,6 +291,7 @@ const secondaryButtonClass = 'inline-flex h-12 items-center justify-center gap-2
       <AccessItVisitorPassCard :record="acceptedRecord" />
       <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p class="flex items-center gap-2 text-sm font-semibold text-slate-700"><Mail class="size-4 text-slate-500" /> Demo notifications</p>
+        <p class="mt-1 text-xs text-slate-500">Prepared in the demo outbox. No email is sent.</p>
         <ul v-if="firedEmails.length" class="mt-3 space-y-2 text-sm text-slate-600">
           <li v-for="email in firedEmails" :key="email.id" class="flex flex-wrap items-baseline gap-x-2"><span class="font-medium text-ink">{{ email.subject }}</span><span class="text-slate-500">to {{ email.to }}</span></li>
         </ul>

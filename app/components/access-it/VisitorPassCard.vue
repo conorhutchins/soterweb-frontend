@@ -13,6 +13,7 @@ const rows = computed(() => [
   ['Visiting', props.record.locationOrHost],
   ['Reason for visit', props.record.description],
   ['Building', props.record.buildingName],
+  ...(props.record.visitLocation ? [['Location', props.record.visitLocation]] : []),
   ['Date', formatDateTime(props.record.loggedOnAt ?? props.record.expectedArrivalAt)],
 ])
 </script>

@@ -187,6 +187,8 @@ export interface AttendanceRecord {
   source?: VisitorSource
   hostContactId?: number
   hostEmail?: string
+  visitLocation?: string
+  hospitality?: string
   vehicleReg?: string
 }
 

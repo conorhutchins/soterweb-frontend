@@ -59,6 +59,8 @@ const details = computed(() => {
       { label: 'Source', value: record.source ?? '—' },
       { label: 'Expected arrival', value: formatDateTime(record.expectedArrivalAt) },
       { label: 'Host email', value: record.hostEmail || '—' },
+      { label: 'Visit location', value: record.visitLocation || '—' },
+      { label: 'Hospitality notes', value: record.hospitality || '—' },
       { label: 'Vehicle registration', value: record.vehicleReg || '—' },
     )
   }

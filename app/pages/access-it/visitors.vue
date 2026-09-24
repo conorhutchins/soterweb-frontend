@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Download, FileDown, Plus, RefreshCw, Send, X } from '@lucide/vue'
-import { DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { toast } from 'vue-sonner'
 import type { VisitorInput } from '~/composables/useSiteAttendance'
 import { isoDate } from '~/lib/access-it/time'
@@ -45,7 +45,7 @@ function describeEmails(action: () => void) {
   const before = sentEmails.value.length
   action()
   const fired = sentEmails.value.slice(0, sentEmails.value.length - before)
-  return fired.length ? fired.map((email) => `Email ${email.runOrder} sent to ${email.to}`).join(' · ') : 'No email automations were active for this action.'
+  return fired.length ? `${fired.length} notification${fired.length === 1 ? '' : 's'} prepared in the demo outbox. No email sent.` : 'No notifications configured for this action.'
 }
 
 function openCreateDialog() {
@@ -140,7 +140,7 @@ function showFutureIntegration(action: string) {
           <div class="flex items-start justify-between gap-4">
             <div>
               <DialogTitle class="text-xl font-semibold tracking-tight text-ink">Delete visitor record</DialogTitle>
-              <p class="mt-1.5 text-sm text-slate-500">This removes <strong class="font-semibold text-slate-700">{{ pendingDelete?.name }}</strong> from the visitor register entirely. It cannot be undone.</p>
+              <DialogDescription class="mt-1.5 text-sm text-slate-500">This removes <strong class="font-semibold text-slate-700">{{ pendingDelete?.name }}</strong> from the visitor register entirely. It cannot be undone.</DialogDescription>
             </div>
             <DialogClose class="rounded-lg p-2 text-slate-400 outline-hidden hover:bg-slate-100 hover:text-slate-700"><X class="size-4" /><span class="sr-only">Close</span></DialogClose>
           </div>
