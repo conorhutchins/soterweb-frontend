@@ -22,6 +22,7 @@ const previousAttendance = computed(() => records.value
   .filter((record) => record.status === 'Departed')
   .sort((left, right) => (right.loggedOffAt ?? '').localeCompare(left.loggedOffAt ?? '')))
 
+const attendanceRecords = computed(() => records.value.filter((record) => record.status === 'On site' || record.status === 'Departed'))
 const visibleRecords = computed(() => showHistory.value ? previousAttendance.value : onSite.value)
 
 function viewRecord(record: AttendanceRecord) {
@@ -61,7 +62,7 @@ function showFutureIntegration(action: string) {
         </div>
       </div>
 
-      <AccessItAttendanceTable v-model:filters="filters" :records="visibleRecords" :filter-records="records" :history="showHistory" @view="viewRecord" @log-off="logOff" />
+      <AccessItAttendanceTable v-model:filters="filters" :records="visibleRecords" :filter-records="attendanceRecords" :history="showHistory" @view="viewRecord" @log-off="logOff" />
     </div>
 
     <AccessItAttendanceDetailDialog v-model:open="isDetailOpen" :record="selectedRecord" />
