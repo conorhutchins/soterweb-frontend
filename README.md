@@ -72,3 +72,9 @@ Signed-in staff manage the module from inside the application.
 - `app/lib/access-it/compliance.ts` holds the pure decision rules (compliance checks, working window, acknowledgements, conflicts).
 - `app/composables/useAccessItConfig.ts`, `useSiteDirectory.ts` and `useSiteAttendance.ts` are the mock stores. Configuration and attendance persist to localStorage so a kiosk tab and a staff tab stay in step; Module settings has a reset. Permits and assets are rebuilt from fixtures on every load so their dates stay relative to today.
 - Emails are written to an on-screen outbox rather than sent. The four timed reminders (still on site after core hours, expected log off warnings) need a scheduler, so they never fire in the demo.
+
+### Account screens
+
+Sign-in uses the public mock account above. Without Remember me, access lasts for the tab session (up to one day); Remember me keeps a mock session for up to 30 days. Sign-out clears both. No password is stored. Existing indefinite demo sessions require a fresh sign-in.
+
+Password recovery and `/login/reset?preview=reset` or `/login/reset?preview=activate` are visual previews only: no email is sent and no credentials are changed. A reset URL without a recognised preview parameter shows an invalid-link state. The .NET service will supply real tokens, password policy, session expiry and recovery delivery.

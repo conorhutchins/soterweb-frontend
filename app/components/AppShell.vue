@@ -25,8 +25,8 @@ function leaveApplication() {
 <template>
   <div class="min-h-dvh bg-[#f5f8fb]">
     <header class="border-b border-soter-700 bg-soter-600 shadow-sm">
-      <div class="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-6 px-5 lg:px-8">
-        <div class="flex min-w-0 items-center gap-6">
+      <div class="mx-auto flex min-h-16 max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-6 lg:px-8">
+        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-3 sm:gap-6">
           <NuxtLink to="/organisations" class="flex shrink-0 items-center gap-5 no-underline">
             <AppWordmark />
             <span class="hidden border-l border-white/20 pl-5 text-sm font-medium text-soter-100 xl:block">Integrated Workplace Management System</span>
