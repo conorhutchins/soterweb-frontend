@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useVueTable, type ColumnDef, type SortingState } from '@tanstack/vue-table'
-import { ArrowDownUp, ChevronLeft, ChevronRight, Ellipsis, Eye, LogOut, Search } from '@lucide/vue'
+import { getCoreRowModel, getPaginationRowModel, getSortedRowModel, useVueTable, type ColumnDef, type SortingState } from '@tanstack/vue-table'
+import { ArrowDownUp, ChevronLeft, ChevronRight, Ellipsis, Eye, LogOut } from '@lucide/vue'
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import { Table } from '~/components/ui/table'
+import { matchesAttendance, type AttendanceFilters } from '~/lib/access-it/attendance-filters'
 import { describeDuration, formatDateTime } from '~/lib/access-it/time'
 import type { AttendanceRecord } from '~/types/access-it'
 
@@ -19,8 +20,8 @@ const emit = defineEmits<{
 
 const { now, isPastExpectedLogOff, isOnSiteOver24Hours } = useSiteAttendance()
 
-const searchTerm = ref('')
-const sorting = ref<SortingState>([])
+const filters = defineModel<AttendanceFilters>('filters', { required: true })
+const sorting = ref<SortingState>([{ id: 'name', desc: false }])
 
 const columns: ColumnDef<AttendanceRecord>[] = [
   { accessorKey: 'type', header: 'Type', enableSorting: false },
@@ -35,17 +36,16 @@ const columns: ColumnDef<AttendanceRecord>[] = [
   { id: 'actions', header: '', enableSorting: false },
 ]
 
+const filteredRecords = computed(() => props.records.filter((record) => matchesAttendance(record, filters.value, now.value)))
+
 const table = useVueTable({
-  get data() { return props.records },
+  get data() { return filteredRecords.value },
   columns,
   state: {
-    get globalFilter() { return searchTerm.value },
     get sorting() { return sorting.value },
   },
-  onGlobalFilterChange: (value) => { searchTerm.value = value },
   onSortingChange: (value) => { sorting.value = typeof value === 'function' ? value(sorting.value) : value },
   getCoreRowModel: getCoreRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
   getSortedRowModel: getSortedRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   initialState: { pagination: { pageSize: 8 } },
@@ -54,7 +54,7 @@ const table = useVueTable({
 const visibleRows = computed(() => table.getRowModel().rows)
 const totalResults = computed(() => table.getFilteredRowModel().rows.length)
 
-watch(() => props.history, () => table.setPageIndex(0))
+watch([() => props.history, filters], () => table.setPageIndex(0), { deep: true })
 
 function sortColumn(columnId: string) {
   table.getColumn(columnId)?.toggleSorting()
@@ -77,15 +77,24 @@ function duration(record: AttendanceRecord) {
 
 <template>
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="relative max-w-md flex-1">
-        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-        <input v-model="searchTerm" type="search" placeholder="Search by name, company, building…" class="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-hidden transition placeholder:text-slate-400 focus:border-soter-500 focus:bg-white focus:ring-3 focus:ring-soter-100" />
-      </div>
-      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-700">{{ totalResults }}</span> {{ totalResults === 1 ? 'record' : 'records' }} {{ history ? 'in previous attendance' : 'on site' }}</p>
+    <AccessItAttendanceFilters v-model="filters" :records="records" :history="history" />
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+      <p role="status" class="text-sm text-slate-600"><strong>{{ totalResults }}</strong> {{ totalResults === 1 ? 'record' : 'records' }} {{ history ? 'in attendance history' : 'on site' }}</p>
+      <label class="flex items-center gap-2 text-sm text-slate-600 lg:hidden">Sort by<select :value="sorting[0]?.id ?? 'name'" class="h-9 rounded border border-slate-200 bg-white px-2" @change="table.setSorting([{ id: ($event.target as HTMLSelectElement).value, desc: false }])"><option value="name">Name</option><option value="buildingName">Building</option><option value="loggedOnAt">Arrival</option></select></label>
     </div>
-
-    <div class="overflow-x-auto">
+    <ul class="divide-y divide-slate-100 lg:hidden" aria-label="Attendance records">
+      <li v-for="row in visibleRows" :key="row.id" class="space-y-3 p-4">
+        <div class="flex flex-wrap items-start justify-between gap-2"><div><h2 class="font-semibold text-ink">{{ row.original.name }}</h2><p class="mt-1 text-sm text-slate-600">{{ row.original.company }}</p></div><AccessItStatusPill :label="row.original.type" :tone="row.original.type === 'Contractor' ? 'info' : 'success'" /></div>
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+          <div><dt class="text-xs text-slate-500">Building</dt><dd class="mt-1 font-medium text-ink">{{ row.original.buildingName }}</dd></div>
+          <div><dt class="text-xs text-slate-500">{{ history ? 'Departed' : 'Expected departure' }}</dt><dd class="mt-1 text-slate-700">{{ formatDateTime(history ? row.original.loggedOffAt : row.original.expectedLogOffAt) }}</dd></div>
+        </dl>
+        <div class="flex flex-wrap items-center gap-2"><AccessItStatusPill v-if="isPastExpectedLogOff(row.original)" label="Overdue" tone="danger" /><AccessItStatusPill v-if="isOnSiteOver24Hours(row.original)" label="Over 24 hours" tone="warning" /><span class="text-xs text-slate-500">{{ duration(row.original) }} on site</span></div>
+        <div class="flex gap-3"><button :aria-label="`View details for ${row.original.name}`" class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-soter-700" @click="emit('view', row.original)"><Eye class="size-4" /> Details</button><button v-if="row.original.status === 'On site'" :aria-label="`Log off ${row.original.name}`" class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-50" @click="emit('logOff', row.original)"><LogOut class="size-4" /> Log off</button></div>
+      </li>
+      <li v-if="!visibleRows.length" class="px-4 py-10 text-center text-sm text-slate-600">No attendance matches these filters.</li>
+    </ul>
+    <div class="hidden overflow-x-auto lg:block">
       <Table class="min-w-[1100px] border-collapse text-left">
         <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
           <tr>
@@ -131,7 +140,7 @@ function duration(record: AttendanceRecord) {
           </tr>
           <tr v-if="visibleRows.length === 0">
             <td colspan="10" class="px-5 py-14 text-center text-sm text-slate-500">
-              {{ searchTerm ? 'Nobody matches your search.' : history ? 'No previous attendance has been recorded yet.' : 'Nobody is currently recorded on site.' }}
+              No attendance matches these filters.
             </td>
           </tr>
         </tbody>

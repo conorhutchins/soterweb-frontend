@@ -5,10 +5,10 @@ import { formatDateTime } from '~/lib/access-it/time'
 const { records, contractorsOnSite, visitorsOnSite, onSiteOver24Hours, onSiteOverExpectedTime } = useSiteAttendance()
 const isSendListOpen = ref(false)
 const tiles = computed(() => [
-  { title: 'Contractors on site', value: contractorsOnSite.value.length, caption: 'Currently recorded on site', tone: 'neutral' as const, to: '/access-it/people-on-site' },
-  { title: 'Visitors on site', value: visitorsOnSite.value.length, caption: 'Currently recorded on site', tone: 'neutral' as const, to: '/access-it/people-on-site' },
-  { title: 'Overdue departures', value: onSiteOverExpectedTime.value.length, caption: 'Past their expected departure', tone: onSiteOverExpectedTime.value.length ? 'danger' as const : 'success' as const, to: '/access-it/people-on-site' },
-  { title: 'On site over 24 hours', value: onSiteOver24Hours.value.length, caption: 'Attendance needs checking', tone: onSiteOver24Hours.value.length ? 'warning' as const : 'success' as const, to: '/access-it/people-on-site' },
+  { title: 'Contractors on site', value: contractorsOnSite.value.length, caption: 'Currently recorded on site', tone: 'neutral' as const, to: '/access-it/people-on-site?type=Contractor' },
+  { title: 'Visitors on site', value: visitorsOnSite.value.length, caption: 'Currently recorded on site', tone: 'neutral' as const, to: '/access-it/people-on-site?type=Visitor' },
+  { title: 'Overdue departures', value: onSiteOverExpectedTime.value.length, caption: 'Past their expected departure', tone: onSiteOverExpectedTime.value.length ? 'danger' as const : 'success' as const, to: '/access-it/people-on-site?attention=overdue' },
+  { title: 'On site over 24 hours', value: onSiteOver24Hours.value.length, caption: 'Attendance needs checking', tone: onSiteOver24Hours.value.length ? 'warning' as const : 'success' as const, to: '/access-it/people-on-site?attention=24h' },
 ])
 const actions = [
   { title: 'Manage visitors', description: 'Pre-book a visit or register an arrival.', to: '/access-it/visitors', icon: UsersRound },
@@ -27,6 +27,7 @@ const recentAttendance = computed(() => records.value.filter((record) => record.
         <div><p class="text-sm font-medium text-soter-700">Access IT</p><h1 class="mt-1 text-3xl font-semibold tracking-tight text-ink">Site overview</h1><p class="mt-2 text-sm text-slate-600">People, visits and attendance at a glance.</p></div>
         <button class="inline-flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50" @click="isSendListOpen = true"><Send class="size-4" /> Send site list</button>
       </header>
+      <p v-if="onSiteOver24Hours.length > 0 && onSiteOver24Hours.length === contractorsOnSite.length + visitorsOnSite.length" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">All saved attendance is over 24 hours old. For a fresh demonstration, use <NuxtLink to="/access-it/settings" class="font-semibold underline">Reset demo data in Settings</NuxtLink>. Your saved visits have been kept.</p>
       <section aria-label="Current attendance" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <AccessItDashboardTile v-for="tile in tiles" :key="tile.title" v-bind="tile" />
       </section>
