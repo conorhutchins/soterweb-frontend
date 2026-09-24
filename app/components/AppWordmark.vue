@@ -1,5 +1,8 @@
+<script setup lang="ts">
+withDefaults(defineProps<{ large?: boolean }>(), { large: false })
+const baseURL = useRuntimeConfig().app.baseURL
+</script>
+
 <template>
-  <span class="inline-flex items-baseline gap-0.5 tracking-[-0.06em]" aria-label="SoterWeb">
-    <span class="text-[1.45em] font-black text-white">soter</span><span class="text-[1.45em] font-light text-soter-100">web</span>
-  </span>
+  <img :src="`${baseURL}brand/soterweb-logo.png`" alt="SOTERweb — Integrated Workplace Management System" width="550" height="140" class="block h-auto rounded bg-white" :class="large ? 'w-64 max-w-full' : 'w-32 px-1.5 py-1'" />
 </template>
