@@ -21,15 +21,15 @@ const toneClasses: Record<Tone, { border: string, value: string, dot: string }> 
 </script>
 
 <template>
-  <NuxtLink :to="to" class="group flex flex-col justify-between rounded-2xl border-2 bg-white p-5 no-underline shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" :class="toneClasses[tone].border">
+  <NuxtLink :to="to" class="group flex flex-col justify-between rounded-2xl border bg-white p-4 sm:p-5 no-underline shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" :class="toneClasses[tone].border">
     <div class="flex items-center justify-between gap-3">
       <p class="text-sm font-medium text-slate-600">{{ title }}</p>
       <span class="size-2.5 rounded-full" :class="toneClasses[tone].dot" aria-hidden="true" />
     </div>
-    <p class="mt-4 text-4xl font-semibold tracking-tight" :class="toneClasses[tone].value">{{ value }}</p>
+    <p class="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight" :class="toneClasses[tone].value">{{ value }}</p>
     <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
       <span>{{ caption }}</span>
-      <span class="flex items-center gap-1 font-medium text-soter-600 opacity-0 transition group-hover:opacity-100">View <ArrowRight class="size-3.5" /></span>
+      <span class="flex items-center gap-1 font-medium text-soter-600 transition">View <ArrowRight class="size-3.5" /></span>
     </div>
   </NuxtLink>
 </template>
