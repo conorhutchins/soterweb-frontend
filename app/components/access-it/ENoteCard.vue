@@ -27,6 +27,5 @@ const toneClasses: Record<NonNullable<typeof props.tone>, string> = {
   <div class="rounded-2xl border px-5 py-4" :class="toneClasses[tone]">
     <p v-if="!bodyOnly && title" class="text-base font-semibold">{{ title }}</p>
     <p v-for="(paragraph, index) in paragraphs" :key="index" class="text-sm leading-6" :class="{ 'mt-1.5': index > 0 || (!bodyOnly && title) }">{{ paragraph }}</p>
-    <p class="mt-2 text-[11px] uppercase tracking-[0.08em] opacity-60">eNote {{ code }}</p>
   </div>
 </template>

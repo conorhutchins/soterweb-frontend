@@ -270,7 +270,7 @@ function confirmLogOn() {
         <ul class="space-y-2">
           <li v-for="notification in notifications" :key="notification.runOrder" class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
             <MailCheck class="mt-0.5 size-4 shrink-0" :class="notification.active ? 'text-emerald-500' : 'text-slate-300'" />
-            <span><span class="font-medium text-ink">Automation {{ notification.runOrder }}</span> <span class="text-slate-500">{{ notification.active ? 'sent to' : 'is inactive, not sent to' }} {{ notification.to }}</span></span>
+            <span><span class="font-medium text-ink">{{ notification.active ? 'Notification prepared' : 'Notification disabled' }}</span><span class="block text-slate-500">{{ notification.to }}</span></span>
           </li>
         </ul>
       </section>
